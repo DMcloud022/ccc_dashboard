@@ -205,3 +205,20 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Streamlit
+.streamlit/secrets.toml
+.streamlit/config.toml
+
+# Google Sheets Credentials
+*credentials*.json
+!example_credentials.json
+credentials/
+secrets/
+
+# Data files
+*.csv
+*.xlsx
+*.xls
+!example*.csv
+!example*.xlsx
