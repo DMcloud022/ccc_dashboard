@@ -909,36 +909,54 @@ def main():
     
     with tab3:
         st.header("PEMEDES Service Provider Analysis")
-        
+
         # Filter PEMEDES data
         if 'Agency' in df_jan_present.columns:
             df_pemedes_jan = df_jan_present[df_jan_present['Agency'].str.contains('PEMEDES', na=False, case=False)]
             df_pemedes_sep = df_sep_present[df_sep_present['Agency'].str.contains('PEMEDES', na=False, case=False)]
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.subheader("Service Providers (Jan-Present)")
+                st.metric("Total PEMEDES Complaints", len(df_pemedes_jan))
+                if 'Service Providers' in df_pemedes_jan.columns and len(df_pemedes_jan) > 0:
+                    valid_data = df_pemedes_jan['Service Providers'].dropna()
+                    valid_data = valid_data[valid_data != '']
+
+                    if len(valid_data) > 0:
+                        provider_counts = valid_data.value_counts().head(15)
+                        fig = create_bar_chart(provider_counts, "Service Provider", 'Purples', 500)
+                        st.plotly_chart(fig, use_container_width=True)
+                    else:
+                        st.info("📊 No service provider data available in this period")
+                else:
+                    fig = create_bar_chart(pd.Series(), "Service Provider", 'Purples', 500)
+                    st.plotly_chart(fig, use_container_width=True)
+                    if 'Service Providers' not in df_pemedes_jan.columns:
+                        st.error("❌ 'Service Providers' column not found")
+
+            with col2:
+                st.subheader("Service Providers (Sep-Present)")
+                st.metric("Total PEMEDES Complaints", len(df_pemedes_sep))
+                if 'Service Providers' in df_pemedes_sep.columns and len(df_pemedes_sep) > 0:
+                    valid_data = df_pemedes_sep['Service Providers'].dropna()
+                    valid_data = valid_data[valid_data != '']
+
+                    if len(valid_data) > 0:
+                        provider_counts = valid_data.value_counts().head(15)
+                        fig = create_bar_chart(provider_counts, "Service Provider", 'Magenta', 500)
+                        st.plotly_chart(fig, use_container_width=True)
+                    else:
+                        st.info("📊 No service provider data available in this period")
+                else:
+                    fig = create_bar_chart(pd.Series(), "Service Provider", 'Magenta', 500)
+                    st.plotly_chart(fig, use_container_width=True)
+                    if 'Service Providers' not in df_pemedes_sep.columns:
+                        st.error("❌ 'Service Providers' column not found")
         else:
-            st.error("❌ 'Agency' column not found in data")
-            return
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.subheader("Service Providers (Jan-Present)")
-            st.metric("Total PEMEDES Complaints", len(df_pemedes_jan))
-            if 'Service Providers' in df_pemedes_jan.columns and len(df_pemedes_jan) > 0:
-                provider_counts = df_pemedes_jan['Service Providers'].value_counts().head(15)
-                fig = create_bar_chart(provider_counts, "Service Provider", 'Purples', 500)
-                st.plotly_chart(fig, use_container_width=True)
-            else:
-                st.info("No service provider data available")
-        
-        with col2:
-            st.subheader("Service Providers (Sep-Present)")
-            st.metric("Total PEMEDES Complaints", len(df_pemedes_sep))
-            if 'Service Providers' in df_pemedes_sep.columns and len(df_pemedes_sep) > 0:
-                provider_counts = df_pemedes_sep['Service Providers'].value_counts().head(15)
-                fig = create_bar_chart(provider_counts, "Service Provider", 'Magenta', 500)
-                st.plotly_chart(fig, use_container_width=True)
-            else:
-                st.info("No service provider data available")
+            st.error("❌ 'Agency' column not found in data. Cannot filter PEMEDES complaints.")
+            st.info("💡 Please ensure your data has an 'Agency' column to filter by organization.")
     
     # Footer
     st.markdown("---")
