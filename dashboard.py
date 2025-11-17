@@ -544,6 +544,18 @@ def prepare_data(df):
         if rows_before > rows_after:
             st.warning(f"⚠️ Removed {rows_before - rows_after} rows with invalid complaint dates")
 
+    # Filter out complaints with Resolution = "FLS" (not included in dashboard)
+    if 'Resolution' in df.columns:
+        rows_before = len(df)
+        # Create a mask to exclude rows where Resolution equals "FLS" (case-insensitive)
+        # Only filter out actual "FLS" values, preserve NaN/None values
+        resolution_upper = df['Resolution'].fillna('').astype(str).str.strip().str.upper()
+        df = df[resolution_upper != 'FLS']
+        rows_after = len(df)
+
+        if rows_before > rows_after:
+            st.info(f"ℹ️ Excluded {rows_before - rows_after} complaints with Resolution = 'FLS' from dashboard")
+
     return df
 
 def filter_by_date(df, start_month, start_year=None):
