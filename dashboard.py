@@ -37,6 +37,19 @@ CUSTOM_CSS = """
     /* Import Google Fonts */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
+    /* ==========================================
+       DESIGN SYSTEM - Consistent Color Palette
+       ==========================================
+       Primary Blue: #3b82f6
+       Light Blue: #eff6ff
+       Dark Gray: #1f2937
+       Medium Gray: #374151
+       Light Gray: #6b7280
+       Border Gray: #cbd5e1, #d1d5db, #e5e7eb
+       Background: #f9fafb, #f8fafc
+       White: #ffffff
+       ========================================== */
+
     /* Global Styles */
     html, body, [class*="css"] {
         font-family: 'Inter', sans-serif;
@@ -44,70 +57,152 @@ CUSTOM_CSS = """
 
     /* Main container styling */
     .block-container {
-        padding-top: 0.5rem;
+        padding-top: 1.5rem;
         padding-bottom: 0rem;
-        padding-left: 1rem;
-        padding-right: 1rem;
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
         max-width: 100%;
     }
 
     /* Header styling */
     h1 {
-        padding-top: 0rem;
+        padding-top: 0.5rem;
         margin-top: 0rem;
         margin-bottom: 0.5rem;
         font-weight: 700;
-        font-size: 2rem;
+        font-size: 1.75rem;
         color: #1f2937;
         letter-spacing: -0.5px;
+        line-height: 1.3;
     }
 
-    h2, h3 {
+    h2, h3, h4 {
         font-weight: 600;
         color: #374151;
     }
 
+    h4 {
+        font-size: 1.15rem;
+        margin-top: 0.2rem;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+    }
+
     /* Metric cards enhancement */
     [data-testid="stMetricValue"] {
-        font-size: 2.25rem;
+        font-size: 2.5rem;
         font-weight: 700;
         color: #1f2937;
+        line-height: 1.2;
     }
 
     [data-testid="stMetricLabel"] {
-        font-size: 0.95rem;
+        font-size: 1rem;
         font-weight: 600;
         color: #6b7280;
         text-transform: uppercase;
         letter-spacing: 0.5px;
+        margin-bottom: 0.5rem;
     }
 
-    /* Chart container styling */
+    [data-testid="stMetricDelta"] {
+        font-size: 0.95rem;
+        font-weight: 500;
+        margin-top: 0.5rem;
+    }
+
+    /* Specific styling for metric label container */
+    [data-testid="stMetricLabel"] > div {
+        padding-bottom: 0.25rem;
+    }
+
+    /* Metric card container - Enhanced with visible borders */
+    [data-testid="metric-container"] {
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+        padding: 1.5rem 1.25rem;
+        border-radius: 12px;
+        border: 2px solid #d1d5db !important;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        transition: all 0.3s ease;
+        margin: 0.25rem 0;
+    }
+
+    [data-testid="metric-container"]:hover {
+        border-color: #3b82f6 !important;
+        box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.2), 0 4px 6px -2px rgba(59, 130, 246, 0.1);
+        transform: translateY(-3px);
+        background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%);
+    }
+
+    /* Make metric cards stand out more - Base styling */
+    div[data-testid="stMetric"] {
+        background-color: white;
+        padding: 1.25rem !important;
+        border-radius: 12px !important;
+        border: 2px solid #cbd5e1 !important;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+        margin: 0.25rem;
+    }
+
+    div[data-testid="stMetric"]:hover {
+        border-color: #3b82f6 !important;
+        box-shadow: 0 8px 12px rgba(59, 130, 246, 0.25) !important;
+        transform: translateY(-2px);
+        background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%) !important;
+    }
+
+    /* Additional emphasis for metric value and label spacing */
+    [data-testid="stMetric"] [data-testid="stMetricValue"] {
+        padding: 0.25rem 0;
+    }
+
+    /* Chart container styling - Consistent across all views */
     .stPlotlyChart {
         background-color: white;
         border-radius: 8px;
-        padding: 4px;
+        padding: 2px;
         box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
         border: 1px solid #e5e7eb;
         transition: all 0.3s ease;
+        margin-bottom: 0.5rem;
     }
 
     .stPlotlyChart:hover {
         box-shadow: 0 4px 6px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06);
+        border-color: #cbd5e1;
     }
 
-    /* Compact subheaders for dashboard */
+    /* Compact subheaders for dashboard - Consistent styling */
     h3 {
-        font-size: 1.1rem;
-        margin-top: 0.25rem;
-        margin-bottom: 0.25rem;
+        font-size: 1rem;
+        margin-top: 0.2rem;
+        margin-bottom: 0.5rem;
         padding-top: 0;
         padding-bottom: 0;
+        font-weight: 600;
     }
 
     /* Reduce column gap for more compact layout */
     [data-testid="column"] {
-        padding: 0 0.5rem;
+        padding: 0 0.35rem;
+    }
+
+    /* Enhanced column styling for metric cards */
+    div[data-testid="column"] > div[data-testid="stVerticalBlock"] > div[data-testid="stMetric"] {
+        background: white;
+        padding: 1.25rem;
+        border-radius: 12px;
+        border: 2px solid #cbd5e1;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-bottom: 0.5rem;
+        transition: all 0.3s ease;
+    }
+
+    div[data-testid="column"] > div[data-testid="stVerticalBlock"] > div[data-testid="stMetric"]:hover {
+        border-color: #3b82f6;
+        box-shadow: 0 8px 12px rgba(59, 130, 246, 0.25);
+        transform: translateY(-2px);
+        background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%);
     }
 
     /* Compact styling for markdown headers in detailed view */
@@ -115,6 +210,38 @@ CUSTOM_CSS = """
         font-size: 1rem;
         font-weight: 600;
         color: #374151;
+    }
+
+    /* Consistent info/warning message styling */
+    .stAlert {
+        border-radius: 8px;
+        margin: 0.5rem 0;
+        font-size: 0.9rem;
+    }
+
+    /* Consistent caption styling - Smaller and subtle */
+    .stCaption {
+        font-size: 0.75rem;
+        color: #9ca3af;
+        margin: 0.15rem 0;
+        line-height: 1.4;
+        opacity: 0.85;
+    }
+
+    /* Make caption text even more compact */
+    [data-testid="stCaptionContainer"] {
+        margin-top: 0.25rem;
+        margin-bottom: 0.25rem;
+    }
+
+    /* Subtle styling for warning/info captions */
+    .stCaption p {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        background-color: #f9fafb;
+        border-left: 2px solid #d1d5db;
+        margin: 0.2rem 0;
     }
 
     /* Live indicator animation */
@@ -135,15 +262,16 @@ CUSTOM_CSS = """
 
     /* Reduce spacing between elements */
     .element-container {
-        margin-bottom: 0.3rem;
+        margin-bottom: 0.2rem;
     }
 
-    /* Tab styling */
+    /* Tab styling - Consistent design */
     .stTabs [data-baseweb="tab-list"] {
         gap: 8px;
         background-color: #f9fafb;
         padding: 8px;
         border-radius: 8px;
+        margin-bottom: 0.75rem;
     }
 
     .stTabs [data-baseweb="tab"] {
@@ -151,14 +279,22 @@ CUSTOM_CSS = """
         padding: 0 24px;
         background-color: white;
         border-radius: 6px;
-        font-weight: 500;
-        border: 1px solid #e5e7eb;
+        font-weight: 600;
+        font-size: 0.95rem;
+        border: 2px solid #e5e7eb;
+        transition: all 0.3s ease;
+    }
+
+    .stTabs [data-baseweb="tab"]:hover {
+        border-color: #cbd5e1;
+        background-color: #f9fafb;
     }
 
     .stTabs [aria-selected="true"] {
         background-color: #3b82f6;
         color: white;
-        border: 1px solid #3b82f6;
+        border: 2px solid #3b82f6;
+        box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
     }
 
     /* Sidebar styling */
@@ -166,34 +302,40 @@ CUSTOM_CSS = """
         background-color: #f9fafb;
     }
 
-    /* Button styling */
+    /* Button styling - Consistent design */
     .stButton>button {
         border-radius: 8px;
-        font-weight: 500;
-        border: 1px solid #e5e7eb;
-        transition: all 0.2s ease;
+        font-weight: 600;
+        font-size: 0.95rem;
+        border: 2px solid #e5e7eb;
+        padding: 0.5rem 1rem;
+        transition: all 0.3s ease;
+        background-color: white;
     }
 
     .stButton>button:hover {
         border-color: #3b82f6;
         color: #3b82f6;
+        background-color: #eff6ff;
+        box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
     }
 
-    /* Info/Warning boxes */
-    .stAlert {
-        border-radius: 8px;
-        border-left: 4px solid;
-    }
 
-    /* Expander styling */
+    /* Expander styling - Consistent design */
     .streamlit-expanderHeader {
         font-weight: 600;
+        font-size: 0.95rem;
         border-radius: 8px;
+        padding: 0.75rem;
+        background-color: #f9fafb;
+        border: 1px solid #e5e7eb;
     }
 
-    /* Radio button styling */
+    /* Radio button styling - Consistent design */
     .stRadio > label {
-        font-weight: 500;
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: #374151;
     }
 
     /* Divider styling */
@@ -201,6 +343,20 @@ CUSTOM_CSS = """
         margin: 0.75rem 0;
         border: none;
         border-top: 2px solid #e5e7eb;
+    }
+
+    /* KPI Section Background - Consistent styling */
+    .element-container:has([data-testid="stHorizontalBlock"]:has([data-testid="column"] [data-testid="stMetric"])) {
+        background-color: #f9fafb;
+        padding: 1rem;
+        border-radius: 12px;
+        margin-bottom: 0.75rem;
+        border: 1px solid #e5e7eb;
+    }
+
+    /* Ensure consistent spacing for all chart sections */
+    [data-testid="stHorizontalBlock"] {
+        margin-bottom: 0.5rem;
     }
 
     /* Fullscreen button */
@@ -516,10 +672,13 @@ def parse_date_robust(date_value):
 def prepare_data(df):
     """Prepare and clean the data with robust validation and date parsing"""
     if df is None or df.empty:
-        return None
+        return None, []
 
     # Make a copy to avoid modifying original
     df = df.copy()
+
+    # Store warning messages to display later
+    warning_messages = []
 
     # Validate and map columns (silently)
     column_mapping, missing_columns, suggestions = validate_required_columns(df)
@@ -565,7 +724,7 @@ def prepare_data(df):
         rows_after = len(df)
 
         if rows_before > rows_after:
-            st.warning(f"⚠️ Removed {rows_before - rows_after} rows with invalid complaint dates")
+            warning_messages.append(f"⚠️ Removed {rows_before - rows_after} rows with invalid complaint dates")
 
     # Filter out complaints with Resolution = "FLS" (not included in dashboard)
     if 'Resolution' in df.columns:
@@ -577,9 +736,9 @@ def prepare_data(df):
         rows_after = len(df)
 
         if rows_before > rows_after:
-            st.info(f"ℹ️ Excluded {rows_before - rows_after} complaints with Resolution = 'FLS' from dashboard")
+            warning_messages.append(f"ℹ️ Excluded {rows_before - rows_after} complaints with Resolution = 'FLS' from dashboard")
 
-    return df
+    return df, warning_messages
 
 def filter_by_date(df, start_month, start_year=None):
     """Filter dataframe by date range with robust error handling"""
@@ -646,7 +805,7 @@ def create_bar_chart(data_series, title, color_scale='blues', height=400):
     fig.update_layout(
         height=height,
         showlegend=False,
-        margin=dict(l=5, r=5, t=5, b=5),
+        margin=dict(l=3, r=3, t=3, b=3),
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
         font=dict(family='Inter, sans-serif', size=14, color='#374151'),
@@ -709,7 +868,7 @@ def create_pie_chart(data_series, title, color_scheme=None, height=400):
     )
     fig.update_layout(
         height=height,
-        margin=dict(l=5, r=5, t=5, b=5),
+        margin=dict(l=3, r=3, t=3, b=3),
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
         font=dict(family='Inter, sans-serif', size=14, color='#374151'),
@@ -743,7 +902,7 @@ def create_line_chart(df_monthly, height=400):
     )
     fig.update_layout(
         height=height,
-        margin=dict(l=5, r=5, t=5, b=5),
+        margin=dict(l=3, r=3, t=3, b=3),
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
         font=dict(family='Inter, sans-serif', size=14, color='#374151'),
@@ -913,17 +1072,17 @@ def main():
             # Show column info and data preview
             with st.expander("📋 Column Information & Data Preview"):
                 st.write(f"**Total columns:** {len(df.columns)}")
-                st.write("**Available columns:**")
+                st.write("**Available columns:")
                 for col in df.columns:
                     st.text(f"  • {col}")
 
                 st.markdown("---")
-                st.write("**Data Preview (First 5 rows):**")
+                st.write("**Data Preview (First 5 rows):")
                 st.dataframe(df.head(), use_container_width=True)
 
                 # Show data types
                 st.markdown("---")
-                st.write("**Column Data Types:**")
+                st.write("**Column Data Types:")
                 dtype_df = pd.DataFrame({
                     'Column': df.dtypes.index,
                     'Type': df.dtypes.values.astype(str)
@@ -996,8 +1155,8 @@ def main():
     
     # Prepare data with progress
     with st.spinner("🔄 Processing data and parsing dates..."):
-        df = prepare_data(df)
-    
+        df, data_warnings = prepare_data(df)
+
     if df is None or df.empty:
         st.error("❌ No valid data after processing. Please check your date formats.")
         return
@@ -1030,27 +1189,62 @@ def main():
         view_mode = st.radio("View:", ["📊 Dashboard", "📋 Detailed"], horizontal=True, label_visibility="collapsed")
         st.session_state.view_mode = view_mode
 
-    # Summary metrics with error handling
+    # Summary metrics with error handling and enhanced design
     col1, col2, col3, col4 = st.columns(4)
+
     with col1:
-        st.metric("Total Complaints (Jan-Present)", len(df_jan_present))
+        jan_count = len(df_jan_present)
+        nov_count = len(df_nov_present)
+        delta_count = jan_count - nov_count
+        st.metric(
+            label="Jan - Present",
+            value=f"{jan_count:,}",
+            delta=f"{delta_count:+,} from Nov",
+            delta_color="inverse",
+            help="Total complaints from January to present"
+        )
+
     with col2:
-        st.metric("Total Complaints (Nov-Present)", len(df_nov_present))
+        nov_count = len(df_nov_present)
+        nov_pct = (nov_count / jan_count * 100) if jan_count > 0 else 0
+        st.metric(
+            label="Nov - Present",
+            value=f"{nov_count:,}",
+            delta=f"{nov_pct:.1f}% of Jan total",
+            delta_color="off",
+            help="Total complaints from November to present"
+        )
+
     with col3:
         if 'Agency' in df_jan_present.columns:
             try:
                 ntc_count = len(df_jan_present[df_jan_present['Agency'].str.contains('NTC', na=False, case=False)])
-                st.metric("NTC Complaints", ntc_count)
+                ntc_pct = (ntc_count / jan_count * 100) if jan_count > 0 else 0
+                st.metric(
+                    label="NTC Complaints",
+                    value=f"{ntc_count:,}",
+                    delta=f"{ntc_pct:.1f}% of total",
+                    delta_color="off",
+                    help="National Telecommunications Commission complaints"
+                )
             except Exception as e:
                 st.metric("NTC Complaints", "Error")
                 st.error(f"Error counting NTC complaints: {str(e)}")
         else:
             st.metric("NTC Complaints", "N/A")
+
     with col4:
         if 'Agency' in df_jan_present.columns:
             try:
                 pemedes_count = len(df_jan_present[df_jan_present['Agency'].str.contains('PEMEDES', na=False, case=False)])
-                st.metric("PEMEDES Complaints", pemedes_count)
+                pemedes_pct = (pemedes_count / jan_count * 100) if jan_count > 0 else 0
+                st.metric(
+                    label="PEMEDES Complaints",
+                    value=f"{pemedes_count:,}",
+                    delta=f"{pemedes_pct:.1f}% of total",
+                    delta_color="off",
+                    help="PEMEDES division complaints"
+                )
             except Exception as e:
                 st.metric("PEMEDES Complaints", "Error")
                 st.error(f"Error counting PEMEDES complaints: {str(e)}")
@@ -1062,13 +1256,13 @@ def main():
     # Dashboard View - 4 Charts in 2x2 Grid (Optimized for Fullscreen)
     if view_mode == "📊 Dashboard":
         # Calculate optimal chart height based on screen (assuming ~900px height in fullscreen)
-        chart_height = 420
+        chart_height = 380
 
         # Row 1: Category and Nature
         col1, col2 = st.columns(2)
 
         with col1:
-            st.subheader("📊 Complaints by Category")
+            st.markdown("#### 📊 Complaints by Category")
             if 'Complaint Category' in df_jan_present.columns:
                 valid_data = df_jan_present['Complaint Category'].dropna()
                 valid_data = valid_data[valid_data != '']
@@ -1082,7 +1276,7 @@ def main():
                 st.error("'Complaint Category' column not found")
 
         with col2:
-            st.subheader("📊 Complaints by Nature")
+            st.markdown("#### 📊 Complaints by Nature")
             if 'Complaint Nature' in df_jan_present.columns:
                 valid_data = df_jan_present['Complaint Nature'].dropna()
                 valid_data = valid_data[valid_data != '']
@@ -1099,7 +1293,7 @@ def main():
         col3, col4 = st.columns(2)
 
         with col3:
-            st.subheader("📈 Monthly Complaint Trend")
+            st.markdown("#### 📈 Monthly Complaint Trend")
             if 'Date of Complaint' in df_jan_present.columns:
                 valid_dates = df_jan_present['Date of Complaint'].dropna()
                 if len(valid_dates) > 0:
@@ -1119,7 +1313,7 @@ def main():
                 st.error("'Date of Complaint' column not found")
 
         with col4:
-            st.subheader("📊 Top Service Providers")
+            st.markdown("#### 📊 Top Service Providers")
             if 'Service Providers' in df_jan_present.columns:
                 valid_data = df_jan_present['Service Providers'].dropna()
                 valid_data = valid_data[valid_data != '']
@@ -1137,42 +1331,40 @@ def main():
         tab1, tab2, tab3 = st.tabs(["📈 Overall Analysis", "🏢 NTC Analysis", "🏢 PEMEDES Analysis"])
 
         with tab1:
-            st.markdown("### Overall Complaint Analysis")
-
             # Row 1: Complaints by Category
             col1, col2 = st.columns(2)
 
             with col1:
-                st.markdown("**Complaints by Category (Jan-Present)**")
+                st.markdown("#### Complaints by Category (Jan-Present)")
                 if 'Complaint Category' in df_jan_present.columns:
                     valid_data = df_jan_present['Complaint Category'].dropna()
                     valid_data = valid_data[valid_data != '']
 
                     if len(valid_data) > 0:
                         category_counts = valid_data.value_counts().head(8)
-                        fig = create_bar_chart(category_counts, "Category", 'blues', 360)
+                        fig = create_bar_chart(category_counts, "Category", 'blues', 340)
                         st.plotly_chart(fig, use_container_width=True, key="detailed_category_jan")
                     else:
                         st.info("📊 No category data available in this period")
                 else:
-                    fig = create_bar_chart(pd.Series(), "Category", 'blues', 360)
+                    fig = create_bar_chart(pd.Series(), "Category", 'blues', 340)
                     st.plotly_chart(fig, use_container_width=True, key="detailed_category_jan_empty")
                     st.error("❌ 'Complaint Category' column not found")
 
             with col2:
-                st.markdown("**Complaints by Category (Nov-Present)**")
+                st.markdown("#### Complaints by Category (Nov-Present)")
                 if 'Complaint Category' in df_nov_present.columns:
                     valid_data = df_nov_present['Complaint Category'].dropna()
                     valid_data = valid_data[valid_data != '']
 
                     if len(valid_data) > 0:
                         category_counts = valid_data.value_counts().head(8)
-                        fig = create_bar_chart(category_counts, "Category", 'oranges', 360)
+                        fig = create_bar_chart(category_counts, "Category", 'oranges', 340)
                         st.plotly_chart(fig, use_container_width=True, key="detailed_category_nov")
                     else:
                         st.info("📊 No category data available in this period")
                 else:
-                    fig = create_bar_chart(pd.Series(), "Category", 'oranges', 360)
+                    fig = create_bar_chart(pd.Series(), "Category", 'oranges', 340)
                     st.plotly_chart(fig, use_container_width=True, key="detailed_category_nov_empty")
                     st.error("❌ 'Complaint Category' column not found")
 
@@ -1180,41 +1372,41 @@ def main():
             col1, col2 = st.columns(2)
 
             with col1:
-                st.markdown("**Complaints by Nature (Jan-Present)**")
+                st.markdown("#### Complaints by Nature (Jan-Present)")
                 if 'Complaint Nature' in df_jan_present.columns:
                     valid_data = df_jan_present['Complaint Nature'].dropna()
                     valid_data = valid_data[valid_data != '']
 
                     if len(valid_data) > 0:
                         nature_counts = valid_data.value_counts().head(8)
-                        fig = create_bar_chart(nature_counts, "Nature", 'purples', 360)
+                        fig = create_bar_chart(nature_counts, "Nature", 'purples', 340)
                         st.plotly_chart(fig, use_container_width=True, key="detailed_nature_jan")
                     else:
                         st.info("📊 No nature data available in this period")
                 else:
-                    fig = create_bar_chart(pd.Series(), "Nature", 'purples', 360)
+                    fig = create_bar_chart(pd.Series(), "Nature", 'purples', 340)
                     st.plotly_chart(fig, use_container_width=True, key="detailed_nature_jan_empty")
                     st.error("❌ 'Complaint Nature' column not found")
 
             with col2:
-                st.markdown("**Complaints by Nature (Nov-Present)**")
+                st.markdown("#### Complaints by Nature (Nov-Present)")
                 if 'Complaint Nature' in df_nov_present.columns:
                     valid_data = df_nov_present['Complaint Nature'].dropna()
                     valid_data = valid_data[valid_data != '']
 
                     if len(valid_data) > 0:
                         nature_counts = valid_data.value_counts().head(8)
-                        fig = create_bar_chart(nature_counts, "Nature", 'teal', 360)
+                        fig = create_bar_chart(nature_counts, "Nature", 'teal', 340)
                         st.plotly_chart(fig, use_container_width=True, key="detailed_nature_nov")
                     else:
                         st.info("📊 No nature data available in this period")
                 else:
-                    fig = create_bar_chart(pd.Series(), "Nature", 'teal', 360)
+                    fig = create_bar_chart(pd.Series(), "Nature", 'teal', 340)
                     st.plotly_chart(fig, use_container_width=True, key="detailed_nature_nov_empty")
                     st.error("❌ 'Complaint Nature' column not found")
 
             # Monthly trend
-            st.markdown("**Monthly Complaint Trend**")
+            st.markdown("#### Monthly Complaint Trend")
             if 'Date of Complaint' in df_jan_present.columns:
                 valid_dates = df_jan_present['Date of Complaint'].dropna()
                 if len(valid_dates) > 0:
@@ -1224,7 +1416,7 @@ def main():
                             'Month': monthly_data.index.astype(str),
                             'Count': monthly_data.values
                         })
-                        fig = create_line_chart(df_monthly, 320)
+                        fig = create_line_chart(df_monthly, 300)
                         st.plotly_chart(fig, use_container_width=True, key="detailed_monthly_trend")
                     else:
                         st.info("📊 No monthly data available")
@@ -1238,13 +1430,11 @@ def main():
                     x=0.5, y=0.5, showarrow=False,
                     font=dict(size=16)
                 )
-                fig.update_layout(height=320)
+                fig.update_layout(height=300)
                 st.plotly_chart(fig, use_container_width=True, key="detailed_monthly_trend_empty")
                 st.error("❌ 'Date of Complaint' column not found")
     
         with tab2:
-            st.markdown("### NTC Service Provider Analysis")
-
             # Filter NTC data with error handling
             if 'Agency' in df_jan_present.columns:
                 try:
@@ -1255,29 +1445,53 @@ def main():
                     df_ntc_jan = pd.DataFrame()
                     df_ntc_sep = pd.DataFrame()
 
+                # Enhanced KPI metrics for NTC
+                kpi_col1, kpi_col2 = st.columns(2)
+                with kpi_col1:
+                    ntc_jan_count = len(df_ntc_jan)
+                    ntc_jan_pct = (ntc_jan_count / len(df_jan_present) * 100) if len(df_jan_present) > 0 else 0
+                    st.metric(
+                        label="NTC (Jan - Present)",
+                        value=f"{ntc_jan_count:,}",
+                        delta=f"{ntc_jan_pct:.1f}% of all complaints",
+                        delta_color="off",
+                        help="NTC complaints from January to present"
+                    )
+                with kpi_col2:
+                    ntc_sep_count = len(df_ntc_sep)
+                    ntc_sep_pct = (ntc_sep_count / len(df_sep_present) * 100) if len(df_sep_present) > 0 else 0
+                    st.metric(
+                        label="NTC (Sep - Present)",
+                        value=f"{ntc_sep_count:,}",
+                        delta=f"{ntc_sep_pct:.1f}% of all complaints",
+                        delta_color="off",
+                        help="NTC complaints from September to present"
+                    )
+
+                st.markdown("---")
+
                 col1, col2 = st.columns(2)
 
                 with col1:
-                    st.markdown("**Service Providers (Jan-Present)**")
-                    st.metric("Total Complaints", len(df_ntc_jan))
+                    st.markdown("#### Service Providers (Jan-Present)")
                     if 'Service Providers' in df_ntc_jan.columns and len(df_ntc_jan) > 0:
                         valid_data = df_ntc_jan['Service Providers'].dropna()
                         valid_data = valid_data[valid_data != '']
 
                         if len(valid_data) > 0:
                             provider_counts = valid_data.value_counts().head(12)
-                            fig = create_bar_chart(provider_counts, "Service Provider", 'greens', 450)
+                            fig = create_bar_chart(provider_counts, "Service Provider", 'greens', 420)
                             st.plotly_chart(fig, use_container_width=True, key="ntc_providers_jan")
                         else:
                             st.info("📊 No service provider data available")
                     else:
-                        fig = create_bar_chart(pd.Series(), "Service Provider", 'greens', 450)
+                        fig = create_bar_chart(pd.Series(), "Service Provider", 'greens', 420)
                         st.plotly_chart(fig, use_container_width=True, key="ntc_providers_jan_empty")
                         if 'Service Providers' not in df_ntc_jan.columns:
                             st.error("❌ 'Service Providers' column not found")
 
                 with col2:
-                    st.markdown("**Service Providers (Sep-Present)**")
+                    st.markdown("#### Service Providers (Sep-Present)")
                     st.metric("Total Complaints", len(df_ntc_sep))
                     if 'Service Providers' in df_ntc_sep.columns and len(df_ntc_sep) > 0:
                         valid_data = df_ntc_sep['Service Providers'].dropna()
@@ -1285,12 +1499,12 @@ def main():
 
                         if len(valid_data) > 0:
                             provider_counts = valid_data.value_counts().head(12)
-                            fig = create_bar_chart(provider_counts, "Service Provider", 'teal', 450)
+                            fig = create_bar_chart(provider_counts, "Service Provider", 'teal', 420)
                             st.plotly_chart(fig, use_container_width=True, key="ntc_providers_sep")
                         else:
                             st.info("📊 No service provider data available")
                     else:
-                        fig = create_bar_chart(pd.Series(), "Service Provider", 'teal', 450)
+                        fig = create_bar_chart(pd.Series(), "Service Provider", 'teal', 420)
                         st.plotly_chart(fig, use_container_width=True, key="ntc_providers_sep_empty")
                         if 'Service Providers' not in df_ntc_sep.columns:
                             st.error("❌ 'Service Providers' column not found")
@@ -1299,8 +1513,6 @@ def main():
                 st.info("💡 Please ensure your data has an 'Agency' column.")
     
         with tab3:
-            st.markdown("### PEMEDES Service Provider Analysis")
-
             # Filter PEMEDES data with error handling
             if 'Agency' in df_jan_present.columns:
                 try:
@@ -1311,29 +1523,53 @@ def main():
                     df_pemedes_jan = pd.DataFrame()
                     df_pemedes_sep = pd.DataFrame()
 
+                # Enhanced KPI metrics for PEMEDES
+                kpi_col1, kpi_col2 = st.columns(2)
+                with kpi_col1:
+                    pemedes_jan_count = len(df_pemedes_jan)
+                    pemedes_jan_pct = (pemedes_jan_count / len(df_jan_present) * 100) if len(df_jan_present) > 0 else 0
+                    st.metric(
+                        label="PEMEDES (Jan - Present)",
+                        value=f"{pemedes_jan_count:,}",
+                        delta=f"{pemedes_jan_pct:.1f}% of all complaints",
+                        delta_color="off",
+                        help="PEMEDES complaints from January to present"
+                    )
+                with kpi_col2:
+                    pemedes_sep_count = len(df_pemedes_sep)
+                    pemedes_sep_pct = (pemedes_sep_count / len(df_sep_present) * 100) if len(df_sep_present) > 0 else 0
+                    st.metric(
+                        label="PEMEDES (Sep - Present)",
+                        value=f"{pemedes_sep_count:,}",
+                        delta=f"{pemedes_sep_pct:.1f}% of all complaints",
+                        delta_color="off",
+                        help="PEMEDES complaints from September to present"
+                    )
+
+                st.markdown("---")
+
                 col1, col2 = st.columns(2)
 
                 with col1:
-                    st.markdown("**Service Providers (Jan-Present)**")
-                    st.metric("Total Complaints", len(df_pemedes_jan))
+                    st.markdown("#### Service Providers (Jan-Present)")
                     if 'Service Providers' in df_pemedes_jan.columns and len(df_pemedes_jan) > 0:
                         valid_data = df_pemedes_jan['Service Providers'].dropna()
                         valid_data = valid_data[valid_data != '']
 
                         if len(valid_data) > 0:
                             provider_counts = valid_data.value_counts().head(12)
-                            fig = create_bar_chart(provider_counts, "Service Provider", 'purples', 450)
+                            fig = create_bar_chart(provider_counts, "Service Provider", 'purples', 420)
                             st.plotly_chart(fig, use_container_width=True, key="pemedes_providers_jan")
                         else:
                             st.info("📊 No service provider data available")
                     else:
-                        fig = create_bar_chart(pd.Series(), "Service Provider", 'purples', 450)
+                        fig = create_bar_chart(pd.Series(), "Service Provider", 'purples', 420)
                         st.plotly_chart(fig, use_container_width=True, key="pemedes_providers_jan_empty")
                         if 'Service Providers' not in df_pemedes_jan.columns:
                             st.error("❌ 'Service Providers' column not found")
 
                 with col2:
-                    st.markdown("**Service Providers (Sep-Present)**")
+                    st.markdown("#### Service Providers (Sep-Present)")
                     st.metric("Total Complaints", len(df_pemedes_sep))
                     if 'Service Providers' in df_pemedes_sep.columns and len(df_pemedes_sep) > 0:
                         valid_data = df_pemedes_sep['Service Providers'].dropna()
@@ -1341,18 +1577,24 @@ def main():
 
                         if len(valid_data) > 0:
                             provider_counts = valid_data.value_counts().head(12)
-                            fig = create_bar_chart(provider_counts, "Service Provider", 'magenta', 450)
+                            fig = create_bar_chart(provider_counts, "Service Provider", 'magenta', 420)
                             st.plotly_chart(fig, use_container_width=True, key="pemedes_providers_sep")
                         else:
                             st.info("📊 No service provider data available")
                     else:
-                        fig = create_bar_chart(pd.Series(), "Service Provider", 'magenta', 450)
+                        fig = create_bar_chart(pd.Series(), "Service Provider", 'magenta', 420)
                         st.plotly_chart(fig, use_container_width=True, key="pemedes_providers_sep_empty")
                         if 'Service Providers' not in df_pemedes_sep.columns:
                             st.error("❌ 'Service Providers' column not found")
             else:
                 st.error("❌ 'Agency' column not found in data. Cannot filter PEMEDES complaints.")
                 st.info("💡 Please ensure your data has an 'Agency' column.")
+
+    # Display data processing warnings at the bottom
+    if data_warnings:
+        st.markdown("<br>", unsafe_allow_html=True)
+        for warning in data_warnings:
+            st.caption(warning)
 
     # Footer
     st.markdown("---")
