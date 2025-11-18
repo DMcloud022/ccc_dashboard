@@ -745,7 +745,7 @@ def main():
     st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
     # Default Google Sheets URL
-    DEFAULT_GSHEET_URL = "https://docs.google.com/spreadsheets/d/1JDd0-4JffW5PB34XKDWaKDfPM-jQ22z1VXeCX1WpKGw/edit?gid=1179220692#gid=1179220692"
+    DEFAULT_GSHEET_URL = "https://docs.google.com/spreadsheets/d/1iqgkRJF6HexmWQsCDMwmBLMW--CeAz6YDEnDF9Hof_A/edit?gid=1179220692#gid=1179220692"
 
     # Initialize session state for auto-refresh
     if 'auto_refresh' not in st.session_state:
