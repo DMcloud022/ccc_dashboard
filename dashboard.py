@@ -44,10 +44,10 @@ CUSTOM_CSS = """
 
     /* Main container styling */
     .block-container {
-        padding-top: 1rem;
+        padding-top: 0.5rem;
         padding-bottom: 0rem;
-        padding-left: 2rem;
-        padding-right: 2rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
         max-width: 100%;
     }
 
@@ -55,7 +55,9 @@ CUSTOM_CSS = """
     h1 {
         padding-top: 0rem;
         margin-top: 0rem;
+        margin-bottom: 0.5rem;
         font-weight: 700;
+        font-size: 2rem;
         color: #1f2937;
         letter-spacing: -0.5px;
     }
@@ -67,14 +69,14 @@ CUSTOM_CSS = """
 
     /* Metric cards enhancement */
     [data-testid="stMetricValue"] {
-        font-size: 2rem;
+        font-size: 2.25rem;
         font-weight: 700;
         color: #1f2937;
     }
 
     [data-testid="stMetricLabel"] {
-        font-size: 0.875rem;
-        font-weight: 500;
+        font-size: 0.95rem;
+        font-weight: 600;
         color: #6b7280;
         text-transform: uppercase;
         letter-spacing: 0.5px;
@@ -83,8 +85,8 @@ CUSTOM_CSS = """
     /* Chart container styling */
     .stPlotlyChart {
         background-color: white;
-        border-radius: 12px;
-        padding: 10px;
+        border-radius: 8px;
+        padding: 4px;
         box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
         border: 1px solid #e5e7eb;
         transition: all 0.3s ease;
@@ -92,6 +94,27 @@ CUSTOM_CSS = """
 
     .stPlotlyChart:hover {
         box-shadow: 0 4px 6px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06);
+    }
+
+    /* Compact subheaders for dashboard */
+    h3 {
+        font-size: 1.1rem;
+        margin-top: 0.25rem;
+        margin-bottom: 0.25rem;
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+
+    /* Reduce column gap for more compact layout */
+    [data-testid="column"] {
+        padding: 0 0.5rem;
+    }
+
+    /* Compact styling for markdown headers in detailed view */
+    .element-container p strong {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #374151;
     }
 
     /* Live indicator animation */
@@ -112,7 +135,7 @@ CUSTOM_CSS = """
 
     /* Reduce spacing between elements */
     .element-container {
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.3rem;
     }
 
     /* Tab styling */
@@ -175,7 +198,7 @@ CUSTOM_CSS = """
 
     /* Divider styling */
     hr {
-        margin: 1.5rem 0;
+        margin: 0.75rem 0;
         border: none;
         border-top: 2px solid #e5e7eb;
     }
@@ -587,7 +610,7 @@ def filter_by_date(df, start_month, start_year=None):
         st.error(f"Error filtering by date: {str(e)}")
         return df
 
-def create_bar_chart(data_series, title, color_scale='Blues', height=400):
+def create_bar_chart(data_series, title, color_scale='blues', height=400):
     """Create a modern bar chart with enhanced styling"""
     if data_series is None or len(data_series) == 0:
         # Return empty figure with message
@@ -623,18 +646,20 @@ def create_bar_chart(data_series, title, color_scale='Blues', height=400):
     fig.update_layout(
         height=height,
         showlegend=False,
-        margin=dict(l=10, r=10, t=10, b=10),
+        margin=dict(l=5, r=5, t=5, b=5),
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
-        font=dict(family='Inter, sans-serif', size=12, color='#374151'),
+        font=dict(family='Inter, sans-serif', size=14, color='#374151'),
         xaxis=dict(
             showgrid=True,
             gridcolor='#f3f4f6',
-            zeroline=False
+            zeroline=False,
+            title_font=dict(size=14)
         ),
         yaxis=dict(
             categoryorder='total ascending',
-            showgrid=False
+            showgrid=False,
+            tickfont=dict(size=14)
         ),
         coloraxis_showscale=False
     )
@@ -684,22 +709,24 @@ def create_pie_chart(data_series, title, color_scheme=None, height=400):
     )
     fig.update_layout(
         height=height,
-        margin=dict(l=10, r=10, t=10, b=10),
+        margin=dict(l=5, r=5, t=5, b=5),
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
-        font=dict(family='Inter, sans-serif', size=12, color='#374151'),
+        font=dict(family='Inter, sans-serif', size=14, color='#374151'),
         showlegend=True,
         legend=dict(
             orientation="v",
             yanchor="middle",
             y=0.5,
             xanchor="left",
-            x=1.02
+            x=1.02,
+            font=dict(size=13)
         )
     )
     fig.update_traces(
         textposition='inside',
         textinfo='percent',
+        textfont=dict(size=14, color='white'),
         hovertemplate='<b>%{label}</b><br>Count: %{value}<br>Percentage: %{percent}<extra></extra>',
         marker=dict(line=dict(color='white', width=2))
     )
@@ -716,20 +743,23 @@ def create_line_chart(df_monthly, height=400):
     )
     fig.update_layout(
         height=height,
-        margin=dict(l=10, r=10, t=10, b=10),
+        margin=dict(l=5, r=5, t=5, b=5),
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
-        font=dict(family='Inter, sans-serif', size=12, color='#374151'),
+        font=dict(family='Inter, sans-serif', size=14, color='#374151'),
         xaxis=dict(
             showgrid=False,
             zeroline=False,
-            title=None
+            title=None,
+            tickfont=dict(size=13)
         ),
         yaxis=dict(
             showgrid=True,
             gridcolor='#f3f4f6',
             zeroline=False,
-            title='Complaints'
+            title='Complaints',
+            title_font=dict(size=14),
+            tickfont=dict(size=14)
         ),
         hovermode='x unified'
     )
@@ -1032,7 +1062,7 @@ def main():
     # Dashboard View - 4 Charts in 2x2 Grid (Optimized for Fullscreen)
     if view_mode == "📊 Dashboard":
         # Calculate optimal chart height based on screen (assuming ~900px height in fullscreen)
-        chart_height = 350
+        chart_height = 420
 
         # Row 1: Category and Nature
         col1, col2 = st.columns(2)
@@ -1043,8 +1073,8 @@ def main():
                 valid_data = df_jan_present['Complaint Category'].dropna()
                 valid_data = valid_data[valid_data != '']
                 if len(valid_data) > 0:
-                    category_counts = valid_data.value_counts().head(10)
-                    fig = create_bar_chart(category_counts, "Category", 'Blues', chart_height)
+                    category_counts = valid_data.value_counts().head(8)
+                    fig = create_bar_chart(category_counts, "Category", 'blues', chart_height)
                     st.plotly_chart(fig, use_container_width=True, key="dashboard_category")
                 else:
                     st.info("No category data available")
@@ -1057,8 +1087,8 @@ def main():
                 valid_data = df_jan_present['Complaint Nature'].dropna()
                 valid_data = valid_data[valid_data != '']
                 if len(valid_data) > 0:
-                    nature_counts = valid_data.value_counts().head(10)
-                    fig = create_pie_chart(nature_counts, "Nature", None, chart_height)
+                    nature_counts = valid_data.value_counts().head(8)
+                    fig = create_bar_chart(nature_counts, "Nature", 'purples', chart_height)
                     st.plotly_chart(fig, use_container_width=True, key="dashboard_nature")
                 else:
                     st.info("No nature data available")
@@ -1094,8 +1124,8 @@ def main():
                 valid_data = df_jan_present['Service Providers'].dropna()
                 valid_data = valid_data[valid_data != '']
                 if len(valid_data) > 0:
-                    provider_counts = valid_data.value_counts().head(10)
-                    fig = create_bar_chart(provider_counts, "Service Provider", 'Greens', chart_height)
+                    provider_counts = valid_data.value_counts().head(8)
+                    fig = create_bar_chart(provider_counts, "Service Provider", 'greens', chart_height)
                     st.plotly_chart(fig, use_container_width=True, key="dashboard_providers")
                 else:
                     st.info("No service provider data available")
@@ -1107,85 +1137,84 @@ def main():
         tab1, tab2, tab3 = st.tabs(["📈 Overall Analysis", "🏢 NTC Analysis", "🏢 PEMEDES Analysis"])
 
         with tab1:
-            st.header("Overall Complaint Analysis")
+            st.markdown("### Overall Complaint Analysis")
 
             # Row 1: Complaints by Category
             col1, col2 = st.columns(2)
 
             with col1:
-                st.subheader("Complaints by Category (Jan-Present)")
+                st.markdown("**Complaints by Category (Jan-Present)**")
                 if 'Complaint Category' in df_jan_present.columns:
-                    # Filter out null/empty values
                     valid_data = df_jan_present['Complaint Category'].dropna()
                     valid_data = valid_data[valid_data != '']
 
                     if len(valid_data) > 0:
-                        category_counts = valid_data.value_counts().head(10)
-                        fig = create_bar_chart(category_counts, "Category", 'Blues')
+                        category_counts = valid_data.value_counts().head(8)
+                        fig = create_bar_chart(category_counts, "Category", 'blues', 360)
                         st.plotly_chart(fig, use_container_width=True, key="detailed_category_jan")
                     else:
                         st.info("📊 No category data available in this period")
                 else:
-                    fig = create_bar_chart(pd.Series(), "Category", 'Blues')
+                    fig = create_bar_chart(pd.Series(), "Category", 'blues', 360)
                     st.plotly_chart(fig, use_container_width=True, key="detailed_category_jan_empty")
-                    st.error("❌ 'Complaint Category' column not found. Please check your data structure.")
+                    st.error("❌ 'Complaint Category' column not found")
 
             with col2:
-                st.subheader("Complaints by Category (Nov-Present)")
+                st.markdown("**Complaints by Category (Nov-Present)**")
                 if 'Complaint Category' in df_nov_present.columns:
                     valid_data = df_nov_present['Complaint Category'].dropna()
                     valid_data = valid_data[valid_data != '']
 
                     if len(valid_data) > 0:
-                        category_counts = valid_data.value_counts().head(10)
-                        fig = create_bar_chart(category_counts, "Category", 'Oranges')
+                        category_counts = valid_data.value_counts().head(8)
+                        fig = create_bar_chart(category_counts, "Category", 'oranges', 360)
                         st.plotly_chart(fig, use_container_width=True, key="detailed_category_nov")
                     else:
                         st.info("📊 No category data available in this period")
                 else:
-                    fig = create_bar_chart(pd.Series(), "Category", 'Oranges')
+                    fig = create_bar_chart(pd.Series(), "Category", 'oranges', 360)
                     st.plotly_chart(fig, use_container_width=True, key="detailed_category_nov_empty")
-                    st.error("❌ 'Complaint Category' column not found. Please check your data structure.")
+                    st.error("❌ 'Complaint Category' column not found")
 
             # Row 2: Complaints by Nature
             col1, col2 = st.columns(2)
 
             with col1:
-                st.subheader("Complaints by Nature (Jan-Present)")
+                st.markdown("**Complaints by Nature (Jan-Present)**")
                 if 'Complaint Nature' in df_jan_present.columns:
                     valid_data = df_jan_present['Complaint Nature'].dropna()
                     valid_data = valid_data[valid_data != '']
 
                     if len(valid_data) > 0:
-                        nature_counts = valid_data.value_counts().head(10)
-                        fig = create_pie_chart(nature_counts, "Nature")
+                        nature_counts = valid_data.value_counts().head(8)
+                        fig = create_bar_chart(nature_counts, "Nature", 'purples', 360)
                         st.plotly_chart(fig, use_container_width=True, key="detailed_nature_jan")
                     else:
                         st.info("📊 No nature data available in this period")
                 else:
-                    fig = create_pie_chart(pd.Series(), "Nature")
+                    fig = create_bar_chart(pd.Series(), "Nature", 'purples', 360)
                     st.plotly_chart(fig, use_container_width=True, key="detailed_nature_jan_empty")
-                    st.error("❌ 'Complaint Nature' column not found. Please check your data structure.")
+                    st.error("❌ 'Complaint Nature' column not found")
 
             with col2:
-                st.subheader("Complaints by Nature (Nov-Present)")
+                st.markdown("**Complaints by Nature (Nov-Present)**")
                 if 'Complaint Nature' in df_nov_present.columns:
                     valid_data = df_nov_present['Complaint Nature'].dropna()
                     valid_data = valid_data[valid_data != '']
 
                     if len(valid_data) > 0:
-                        nature_counts = valid_data.value_counts().head(10)
-                        fig = create_pie_chart(nature_counts, "Nature", px.colors.sequential.RdBu)
+                        nature_counts = valid_data.value_counts().head(8)
+                        fig = create_bar_chart(nature_counts, "Nature", 'teal', 360)
                         st.plotly_chart(fig, use_container_width=True, key="detailed_nature_nov")
                     else:
                         st.info("📊 No nature data available in this period")
                 else:
-                    fig = create_pie_chart(pd.Series(), "Nature", px.colors.sequential.RdBu)
+                    fig = create_bar_chart(pd.Series(), "Nature", 'teal', 360)
                     st.plotly_chart(fig, use_container_width=True, key="detailed_nature_nov_empty")
-                    st.error("❌ 'Complaint Nature' column not found. Please check your data structure.")
+                    st.error("❌ 'Complaint Nature' column not found")
 
             # Monthly trend
-            st.subheader("Monthly Complaint Trend")
+            st.markdown("**Monthly Complaint Trend**")
             if 'Date of Complaint' in df_jan_present.columns:
                 valid_dates = df_jan_present['Date of Complaint'].dropna()
                 if len(valid_dates) > 0:
@@ -1195,7 +1224,7 @@ def main():
                             'Month': monthly_data.index.astype(str),
                             'Count': monthly_data.values
                         })
-                        fig = create_line_chart(df_monthly, 400)
+                        fig = create_line_chart(df_monthly, 320)
                         st.plotly_chart(fig, use_container_width=True, key="detailed_monthly_trend")
                     else:
                         st.info("📊 No monthly data available")
@@ -1209,12 +1238,12 @@ def main():
                     x=0.5, y=0.5, showarrow=False,
                     font=dict(size=16)
                 )
-                fig.update_layout(height=400)
+                fig.update_layout(height=320)
                 st.plotly_chart(fig, use_container_width=True, key="detailed_monthly_trend_empty")
-                st.error("❌ 'Date of Complaint' column not found. Please check your data structure.")
+                st.error("❌ 'Date of Complaint' column not found")
     
         with tab2:
-            st.header("NTC Service Provider Analysis")
+            st.markdown("### NTC Service Provider Analysis")
 
             # Filter NTC data with error handling
             if 'Agency' in df_jan_present.columns:
@@ -1229,48 +1258,48 @@ def main():
                 col1, col2 = st.columns(2)
 
                 with col1:
-                    st.subheader("Service Providers (Jan-Present)")
-                    st.metric("Total NTC Complaints", len(df_ntc_jan))
+                    st.markdown("**Service Providers (Jan-Present)**")
+                    st.metric("Total Complaints", len(df_ntc_jan))
                     if 'Service Providers' in df_ntc_jan.columns and len(df_ntc_jan) > 0:
                         valid_data = df_ntc_jan['Service Providers'].dropna()
                         valid_data = valid_data[valid_data != '']
 
                         if len(valid_data) > 0:
-                            provider_counts = valid_data.value_counts().head(15)
-                            fig = create_bar_chart(provider_counts, "Service Provider", 'Greens', 500)
+                            provider_counts = valid_data.value_counts().head(12)
+                            fig = create_bar_chart(provider_counts, "Service Provider", 'greens', 450)
                             st.plotly_chart(fig, use_container_width=True, key="ntc_providers_jan")
                         else:
-                            st.info("📊 No service provider data available in this period")
+                            st.info("📊 No service provider data available")
                     else:
-                        fig = create_bar_chart(pd.Series(), "Service Provider", 'Greens', 500)
+                        fig = create_bar_chart(pd.Series(), "Service Provider", 'greens', 450)
                         st.plotly_chart(fig, use_container_width=True, key="ntc_providers_jan_empty")
                         if 'Service Providers' not in df_ntc_jan.columns:
                             st.error("❌ 'Service Providers' column not found")
 
                 with col2:
-                    st.subheader("Service Providers (Sep-Present)")
-                    st.metric("Total NTC Complaints", len(df_ntc_sep))
+                    st.markdown("**Service Providers (Sep-Present)**")
+                    st.metric("Total Complaints", len(df_ntc_sep))
                     if 'Service Providers' in df_ntc_sep.columns and len(df_ntc_sep) > 0:
                         valid_data = df_ntc_sep['Service Providers'].dropna()
                         valid_data = valid_data[valid_data != '']
 
                         if len(valid_data) > 0:
-                            provider_counts = valid_data.value_counts().head(15)
-                            fig = create_bar_chart(provider_counts, "Service Provider", 'Teal', 500)
+                            provider_counts = valid_data.value_counts().head(12)
+                            fig = create_bar_chart(provider_counts, "Service Provider", 'teal', 450)
                             st.plotly_chart(fig, use_container_width=True, key="ntc_providers_sep")
                         else:
-                            st.info("📊 No service provider data available in this period")
+                            st.info("📊 No service provider data available")
                     else:
-                        fig = create_bar_chart(pd.Series(), "Service Provider", 'Teal', 500)
+                        fig = create_bar_chart(pd.Series(), "Service Provider", 'teal', 450)
                         st.plotly_chart(fig, use_container_width=True, key="ntc_providers_sep_empty")
                         if 'Service Providers' not in df_ntc_sep.columns:
                             st.error("❌ 'Service Providers' column not found")
             else:
                 st.error("❌ 'Agency' column not found in data. Cannot filter NTC complaints.")
-                st.info("💡 Please ensure your data has an 'Agency' column to filter by organization.")
+                st.info("💡 Please ensure your data has an 'Agency' column.")
     
         with tab3:
-            st.header("PEMEDES Service Provider Analysis")
+            st.markdown("### PEMEDES Service Provider Analysis")
 
             # Filter PEMEDES data with error handling
             if 'Agency' in df_jan_present.columns:
@@ -1285,45 +1314,45 @@ def main():
                 col1, col2 = st.columns(2)
 
                 with col1:
-                    st.subheader("Service Providers (Jan-Present)")
-                    st.metric("Total PEMEDES Complaints", len(df_pemedes_jan))
+                    st.markdown("**Service Providers (Jan-Present)**")
+                    st.metric("Total Complaints", len(df_pemedes_jan))
                     if 'Service Providers' in df_pemedes_jan.columns and len(df_pemedes_jan) > 0:
                         valid_data = df_pemedes_jan['Service Providers'].dropna()
                         valid_data = valid_data[valid_data != '']
 
                         if len(valid_data) > 0:
-                            provider_counts = valid_data.value_counts().head(15)
-                            fig = create_bar_chart(provider_counts, "Service Provider", 'Purples', 500)
+                            provider_counts = valid_data.value_counts().head(12)
+                            fig = create_bar_chart(provider_counts, "Service Provider", 'purples', 450)
                             st.plotly_chart(fig, use_container_width=True, key="pemedes_providers_jan")
                         else:
-                            st.info("📊 No service provider data available in this period")
+                            st.info("📊 No service provider data available")
                     else:
-                        fig = create_bar_chart(pd.Series(), "Service Provider", 'Purples', 500)
+                        fig = create_bar_chart(pd.Series(), "Service Provider", 'purples', 450)
                         st.plotly_chart(fig, use_container_width=True, key="pemedes_providers_jan_empty")
                         if 'Service Providers' not in df_pemedes_jan.columns:
                             st.error("❌ 'Service Providers' column not found")
 
                 with col2:
-                    st.subheader("Service Providers (Sep-Present)")
-                    st.metric("Total PEMEDES Complaints", len(df_pemedes_sep))
+                    st.markdown("**Service Providers (Sep-Present)**")
+                    st.metric("Total Complaints", len(df_pemedes_sep))
                     if 'Service Providers' in df_pemedes_sep.columns and len(df_pemedes_sep) > 0:
                         valid_data = df_pemedes_sep['Service Providers'].dropna()
                         valid_data = valid_data[valid_data != '']
 
                         if len(valid_data) > 0:
-                            provider_counts = valid_data.value_counts().head(15)
-                            fig = create_bar_chart(provider_counts, "Service Provider", 'Magenta', 500)
+                            provider_counts = valid_data.value_counts().head(12)
+                            fig = create_bar_chart(provider_counts, "Service Provider", 'magenta', 450)
                             st.plotly_chart(fig, use_container_width=True, key="pemedes_providers_sep")
                         else:
-                            st.info("📊 No service provider data available in this period")
+                            st.info("📊 No service provider data available")
                     else:
-                        fig = create_bar_chart(pd.Series(), "Service Provider", 'Magenta', 500)
+                        fig = create_bar_chart(pd.Series(), "Service Provider", 'magenta', 450)
                         st.plotly_chart(fig, use_container_width=True, key="pemedes_providers_sep_empty")
                         if 'Service Providers' not in df_pemedes_sep.columns:
                             st.error("❌ 'Service Providers' column not found")
             else:
                 st.error("❌ 'Agency' column not found in data. Cannot filter PEMEDES complaints.")
-                st.info("💡 Please ensure your data has an 'Agency' column to filter by organization.")
+                st.info("💡 Please ensure your data has an 'Agency' column.")
 
     # Footer
     st.markdown("---")
