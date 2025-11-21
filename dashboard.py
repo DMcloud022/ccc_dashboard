@@ -160,367 +160,113 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# CSS Styles - Applied in main() function
+# CSS Styles - Simple white background design, compressed
 CUSTOM_CSS = """
     <style>
     /* Import Google Fonts */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-    /* ==========================================
-       DESIGN SYSTEM - Consistent Color Palette
-       ==========================================
-       Primary Blue: #3b82f6
-       Light Blue: #eff6ff
-       Dark Gray: #1f2937
-       Medium Gray: #374151
-       Light Gray: #6b7280
-       Border Gray: #cbd5e1, #d1d5db, #e5e7eb
-       Background: #f9fafb, #f8fafc
-       White: #ffffff
-       ========================================== */
-
     /* Global Styles */
     html, body, [class*="css"] {
         font-family: 'Inter', sans-serif;
+        background-color: white;
     }
 
-    /* Main container styling */
+    /* Main container styling - Compressed */
     .block-container {
         padding-top: 1.5rem;
         padding-bottom: 0rem;
-        padding-left: 0.75rem;
-        padding-right: 0.75rem;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
         max-width: 100%;
+        background-color: white;
     }
 
-    /* Header styling */
+    /* Header styling - Hierarchical sizes */
     h1 {
-        padding-top: 0.5rem;
+        padding-top: 0.25rem;
         margin-top: 0rem;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.75rem;
         font-weight: 700;
-        font-size: 1.75rem;
+        font-size: 2rem !important;
         color: #1f2937;
-        letter-spacing: -0.5px;
-        line-height: 1.3;
     }
 
-    h2, h3, h4 {
+    h2 {
         font-weight: 600;
         color: #374151;
+        margin-top: 0.5rem;
+        margin-bottom: 0.5rem;
+        font-size: 1.5rem;
+    }
+
+    h3 {
+        font-weight: 600;
+        color: #374151;
+        margin-top: 0.5rem;
+        margin-bottom: 0.5rem;
+        font-size: 1.3rem;
     }
 
     h4 {
-        font-size: 1.15rem;
-        margin-top: 0.2rem;
-        margin-bottom: 0.5rem;
         font-weight: 600;
+        color: #374151;
+        margin-top: 0.25rem;
+        margin-bottom: 0.5rem;
+        font-size: 1.1rem;
     }
 
-    /* Metric cards enhancement */
+    /* Metric cards - Compressed */
     [data-testid="stMetricValue"] {
-        font-size: 2.5rem;
+        font-size: 2.2rem;
         font-weight: 700;
         color: #1f2937;
-        line-height: 1.2;
     }
 
     [data-testid="stMetricLabel"] {
-        font-size: 1rem;
+        font-size: 0.9rem;
         font-weight: 600;
         color: #6b7280;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-bottom: 0.5rem;
     }
 
-    [data-testid="stMetricDelta"] {
-        font-size: 0.95rem;
-        font-weight: 500;
-        margin-top: 0.5rem;
-    }
-
-    /* Specific styling for metric label container */
-    [data-testid="stMetricLabel"] > div {
-        padding-bottom: 0.25rem;
-    }
-
-    /* Metric card container - Enhanced with visible borders */
-    [data-testid="metric-container"] {
-        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-        padding: 1.5rem 1.25rem;
-        border-radius: 12px;
-        border: 2px solid #d1d5db !important;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        transition: all 0.3s ease;
-        margin: 0.25rem 0;
-    }
-
-    [data-testid="metric-container"]:hover {
-        border-color: #3b82f6 !important;
-        box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.2), 0 4px 6px -2px rgba(59, 130, 246, 0.1);
-        transform: translateY(-3px);
-        background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%);
-    }
-
-    /* Make metric cards stand out more - Base styling */
     div[data-testid="stMetric"] {
         background-color: white;
-        padding: 1.25rem !important;
-        border-radius: 12px !important;
-        border: 2px solid #cbd5e1 !important;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
-        margin: 0.25rem;
+        padding: 1rem !important;
+        border-radius: 8px !important;
+        border: 1px solid #e5e7eb !important;
+        margin: 0.2rem;
     }
 
-    div[data-testid="stMetric"]:hover {
-        border-color: #3b82f6 !important;
-        box-shadow: 0 8px 12px rgba(59, 130, 246, 0.25) !important;
-        transform: translateY(-2px);
-        background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%) !important;
-    }
-
-    /* Additional emphasis for metric value and label spacing */
-    [data-testid="stMetric"] [data-testid="stMetricValue"] {
-        padding: 0.25rem 0;
-    }
-
-    /* Chart container styling - Consistent across all views */
+    /* Chart container - Compressed */
     .stPlotlyChart {
         background-color: white;
         border-radius: 8px;
         padding: 2px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
         border: 1px solid #e5e7eb;
-        transition: all 0.3s ease;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.3rem;
     }
 
-    .stPlotlyChart:hover {
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06);
-        border-color: #cbd5e1;
-    }
-
-    /* Compact subheaders for dashboard - Consistent styling */
-    h3 {
-        font-size: 1rem;
-        margin-top: 0.2rem;
-        margin-bottom: 0.5rem;
-        padding-top: 0;
-        padding-bottom: 0;
-        font-weight: 600;
-    }
-
-    /* Reduce column gap for more compact layout */
-    [data-testid="column"] {
-        padding: 0 0.35rem;
-    }
-
-    /* Enhanced column styling for metric cards */
-    div[data-testid="column"] > div[data-testid="stVerticalBlock"] > div[data-testid="stMetric"] {
-        background: white;
-        padding: 1.25rem;
-        border-radius: 12px;
-        border: 2px solid #cbd5e1;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        margin-bottom: 0.5rem;
-        transition: all 0.3s ease;
-    }
-
-    div[data-testid="column"] > div[data-testid="stVerticalBlock"] > div[data-testid="stMetric"]:hover {
-        border-color: #3b82f6;
-        box-shadow: 0 8px 12px rgba(59, 130, 246, 0.25);
-        transform: translateY(-2px);
-        background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%);
-    }
-
-    /* Compact styling for markdown headers in detailed view */
-    .element-container p strong {
-        font-size: 1rem;
-        font-weight: 600;
-        color: #374151;
-    }
-
-    /* Consistent info/warning message styling */
-    .stAlert {
-        border-radius: 8px;
-        margin: 0.5rem 0;
-        font-size: 0.9rem;
-    }
-
-    /* Consistent caption styling - Smaller and subtle */
-    .stCaption {
-        font-size: 0.75rem;
-        color: #9ca3af;
-        margin: 0.15rem 0;
-        line-height: 1.4;
-        opacity: 0.85;
-    }
-
-    /* Make caption text even more compact */
-    [data-testid="stCaptionContainer"] {
-        margin-top: 0.25rem;
-        margin-bottom: 0.25rem;
-    }
-
-    /* Subtle styling for warning/info captions */
-    .stCaption p {
-        font-size: 0.75rem;
-        padding: 0.25rem 0.5rem;
-        border-radius: 4px;
-        background-color: #f9fafb;
-        border-left: 2px solid #d1d5db;
-        margin: 0.2rem 0;
-    }
-
-    /* Live indicator animation */
-    .live-indicator {
-        display: inline-block;
-        width: 10px;
-        height: 10px;
-        background-color: #10b981;
-        border-radius: 50%;
-        animation: pulse 2s infinite;
-        margin-right: 8px;
-    }
-
-    @keyframes pulse {
-        0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-        50% { opacity: 0.7; box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
-    }
-
-    /* Reduce spacing between elements */
-    .element-container {
-        margin-bottom: 0.2rem;
-    }
-
-    /* Tab styling - Consistent design */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-        background-color: #f9fafb;
-        padding: 8px;
-        border-radius: 8px;
-        margin-bottom: 0.75rem;
-    }
-
-    .stTabs [data-baseweb="tab"] {
-        height: 50px;
-        padding: 0 24px;
-        background-color: white;
-        border-radius: 6px;
-        font-weight: 600;
-        font-size: 0.95rem;
-        border: 2px solid #e5e7eb;
-        transition: all 0.3s ease;
-    }
-
-    .stTabs [data-baseweb="tab"]:hover {
-        border-color: #cbd5e1;
-        background-color: #f9fafb;
-    }
-
-    .stTabs [aria-selected="true"] {
-        background-color: #3b82f6;
-        color: white;
-        border: 2px solid #3b82f6;
-        box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
-    }
-
-    /* Sidebar styling */
+    /* Sidebar - Simple white */
     [data-testid="stSidebar"] {
-        background-color: #f9fafb;
+        background-color: white;
     }
 
-    /* Button styling - Consistent design */
+    /* Button styling */
     .stButton>button {
         border-radius: 8px;
         font-weight: 600;
-        font-size: 0.95rem;
-        border: 2px solid #e5e7eb;
+        border: 1px solid #e5e7eb;
         padding: 0.5rem 1rem;
-        transition: all 0.3s ease;
         background-color: white;
     }
 
-    .stButton>button:hover {
-        border-color: #3b82f6;
-        color: #3b82f6;
-        background-color: #eff6ff;
-        box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
-    }
-
-
-    /* Expander styling - Consistent design */
-    .streamlit-expanderHeader {
-        font-weight: 600;
-        font-size: 0.95rem;
-        border-radius: 8px;
-        padding: 0.75rem;
-        background-color: #f9fafb;
-        border: 1px solid #e5e7eb;
-    }
-
-    /* Radio button styling - Consistent design */
-    .stRadio > label {
-        font-weight: 600;
-        font-size: 0.95rem;
-        color: #374151;
-    }
-
-    /* Divider styling */
+    /* Divider styling - Compressed */
     hr {
-        margin: 0.75rem 0;
+        margin: 0.5rem 0;
         border: none;
-        border-top: 2px solid #e5e7eb;
-    }
-
-    /* KPI Section Background - Consistent styling */
-    .element-container:has([data-testid="stHorizontalBlock"]:has([data-testid="column"] [data-testid="stMetric"])) {
-        background-color: #f9fafb;
-        padding: 1rem;
-        border-radius: 12px;
-        margin-bottom: 0.75rem;
-        border: 1px solid #e5e7eb;
-    }
-
-    /* Ensure consistent spacing for all chart sections */
-    [data-testid="stHorizontalBlock"] {
-        margin-bottom: 0.5rem;
-    }
-
-    /* Fullscreen button */
-    .fullscreen-btn {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        z-index: 999;
-        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-        color: white;
-        padding: 12px 24px;
-        border-radius: 50px;
-        cursor: pointer;
-        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-        font-weight: 600;
-        transition: all 0.3s ease;
-    }
-
-    .fullscreen-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
+        border-top: 1px solid #e5e7eb;
     }
     </style>
-
-    <script>
-    function toggleFullscreen() {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen();
-        } else {
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
-            }
-        }
-    }
-    </script>
 """
 
 def is_ntc_complaint(agency):
@@ -1033,14 +779,21 @@ def create_bar_chart(data_series, title, color_scale='blues', height=400):
             showgrid=True,
             gridcolor='#f3f4f6',
             zeroline=False,
-            title_font=dict(size=14)
+            title_font=dict(size=14),
+            tickangle=0,  # Force numbers horizontal
+            tickfont=dict(size=12),
+            automargin=True
         ),
         yaxis=dict(
             categoryorder='total ascending',
             showgrid=False,
-            tickfont=dict(size=13)  # Slightly smaller for better fit
+            tickfont=dict(size=13),
+            tickangle=0,  # Force labels horizontal
+            automargin=True
         ),
-        coloraxis_showscale=False
+        coloraxis_showscale=False,
+        uniformtext_minsize=8,
+        uniformtext_mode='hide'
     )
     fig.update_traces(
         marker=dict(
@@ -1137,7 +890,9 @@ def create_line_chart(df_monthly, height=400):
             showgrid=False,
             zeroline=False,
             title=None,
-            tickfont=dict(size=12)  # Smaller tick font
+            tickfont=dict(size=12),
+            tickangle=0,  # Force labels horizontal
+            automargin=True
         ),
         yaxis=dict(
             showgrid=True,
@@ -1145,9 +900,13 @@ def create_line_chart(df_monthly, height=400):
             zeroline=False,
             title='Complaints',
             title_font=dict(size=13),
-            tickfont=dict(size=12)
+            tickfont=dict(size=12),
+            tickangle=0,  # Force numbers horizontal
+            automargin=True
         ),
-        hovermode='x unified'
+        hovermode='x unified',
+        uniformtext_minsize=8,
+        uniformtext_mode='hide'
     )
     fig.update_traces(
         line=dict(color='#3b82f6', width=3),
@@ -1161,17 +920,11 @@ def create_line_chart(df_monthly, height=400):
     return fig
 
 def main():
-    # Apply custom CSS styles
-    st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
-
-    # Default Google Sheets URL
-    DEFAULT_GSHEET_URL = "https://docs.google.com/spreadsheets/d/1JDd0-4JffW5PB34XKDWaKDfPM-jQ22z1VXeCX1WpKGw/edit?usp=sharing"
-
-    # Initialize session state for auto-refresh
+    # Initialize session state FIRST - before any other code
     if 'auto_refresh' not in st.session_state:
-        st.session_state.auto_refresh = False
+        st.session_state.auto_refresh = True
     if 'refresh_interval' not in st.session_state:
-        st.session_state.refresh_interval = 60
+        st.session_state.refresh_interval = 300
     if 'data_source_type' not in st.session_state:
         st.session_state.data_source_type = None
     if 'file_path' not in st.session_state:
@@ -1179,25 +932,28 @@ def main():
     if 'gsheet_creds' not in st.session_state:
         st.session_state.gsheet_creds = None
     if 'gsheet_url' not in st.session_state:
-        st.session_state.gsheet_url = DEFAULT_GSHEET_URL
+        st.session_state.gsheet_url = ""
     if 'use_public_sheet' not in st.session_state:
         st.session_state.use_public_sheet = True
     if 'view_mode' not in st.session_state:
         st.session_state.view_mode = "Dashboard"
+
+    # Apply custom CSS styles
+    st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+
+    # Load default Google Sheets URL from secrets (secure)
+    # SECURITY: URL is stored in .streamlit/secrets.toml and not exposed in code
+    try:
+        DEFAULT_GSHEET_URL = st.secrets["default_sheet"]["url"]
+        DEFAULT_SHEET_AVAILABLE = True
+        if 'gsheet_url' in st.session_state and not st.session_state.gsheet_url:
+            st.session_state.gsheet_url = DEFAULT_GSHEET_URL
+    except:
+        DEFAULT_GSHEET_URL = ""
+        DEFAULT_SHEET_AVAILABLE = False
     
-    # Enhanced header with live indicator
-    if st.session_state.auto_refresh:
-        st.markdown("""
-            <div style="margin-bottom: 1.5rem;">
-                <h1 style="display: inline-block; margin: 0;">📊 Complaint Analysis Dashboard</h1>
-                <span style="float: right; margin-top: 8px;">
-                    <span class="live-indicator" style="display: inline-block; width: 10px; height: 10px; background-color: #10b981; border-radius: 50%; margin-right: 6px;"></span>
-                    <span style="font-size: 0.9rem; font-weight: 600; color: #10b981;">LIVE</span>
-                </span>
-            </div>
-        """, unsafe_allow_html=True)
-    else:
-        st.title("📊 Complaint Analysis Dashboard")
+    # Dashboard header
+    st.markdown('<h1 style="font-size: 2rem; font-weight: 700; margin-bottom: 0.75rem;">📊 Complaint Analysis Dashboard</h1>', unsafe_allow_html=True)
     
     # Sidebar for data loading and settings
     with st.sidebar:
@@ -1225,13 +981,12 @@ def main():
             
             if spreadsheet_url:
                 st.session_state.gsheet_url = spreadsheet_url
-                
-                # Use timestamp for cache busting in real-time mode
-                if st.session_state.auto_refresh:
-                    current_time = datetime.now().timestamp()
-                else:
-                    current_time = 0
-                
+
+                # Simple robust caching: round timestamp to refresh interval
+                # This ensures cache updates at regular intervals for real-time data
+                interval = st.session_state.refresh_interval if st.session_state.auto_refresh else 60
+                current_time = int(datetime.now().timestamp() // interval) * interval
+
                 df = load_data_from_public_gsheet(spreadsheet_url, current_time)
                 st.session_state.data_source_type = "gsheets_public"
         
@@ -1283,14 +1038,13 @@ def main():
                 st.session_state.gsheet_url = spreadsheet_url
             
             if st.session_state.gsheet_creds and st.session_state.gsheet_url:
-                # Use timestamp for cache busting
-                if st.session_state.auto_refresh:
-                    current_time = datetime.now().timestamp()
-                else:
-                    current_time = 0
-                
+                # Simple robust caching: round timestamp to refresh interval
+                # This ensures cache updates at regular intervals for real-time data
+                interval = st.session_state.refresh_interval if st.session_state.auto_refresh else 60
+                current_time = int(datetime.now().timestamp() // interval) * interval
+
                 df = load_data_from_gsheet_with_auth(
-                    st.session_state.gsheet_creds, 
+                    st.session_state.gsheet_creds,
                     st.session_state.gsheet_url,
                     current_time
                 )
@@ -1331,16 +1085,23 @@ def main():
                 refresh_interval = st.selectbox(
                     "Refresh interval (seconds):",
                     [30, 60, 120, 300],
-                    index=1
+                    index=3
                 )
                 st.session_state.refresh_interval = refresh_interval
-                
-                # Manual refresh button
-                if st.button("🔄 Refresh Now"):
+
+                st.info(f"⏱️ Auto-refreshing every {refresh_interval}s")
+
+            # Cache management buttons
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("🔄 Refresh Now", use_container_width=True):
                     st.cache_data.clear()
                     st.rerun()
-                
-                st.info(f"⏱️ Auto-refreshing every {refresh_interval}s")
+            with col2:
+                if st.button("🗑️ Clear Cache", use_container_width=True):
+                    st.cache_data.clear()
+                    st.success("✓ Cleared!")
+                    st.rerun()
             
             st.markdown("---")
             
@@ -1464,112 +1225,29 @@ def main():
         period3_short = "All"
         min_date = None
         max_date = None
-    
-    # Display actual date ranges and data validation for verification
-    with st.expander("📅 Data Validation & Date Range Verification", expanded=False):
-        st.markdown("### Date Ranges")
-        col_v1, col_v2, col_v3 = st.columns(3)
-        with col_v1:
-            st.write(f"**{period1_label}:**")
-            if len(df_period1) > 0 and 'Date of Complaint' in df_period1.columns:
-                dates = df_period1['Date of Complaint'].dropna()
-                if len(dates) > 0:
-                    st.write(f"• From: {dates.min().strftime('%Y-%m-%d')}")
-                    st.write(f"• To: {dates.max().strftime('%Y-%m-%d')}")
-                    st.write(f"• Records: {len(df_period1):,}")
-        with col_v2:
-            st.write(f"**{period2_label}:**")
-            if len(df_period2) > 0 and 'Date of Complaint' in df_period2.columns:
-                dates = df_period2['Date of Complaint'].dropna()
-                if len(dates) > 0:
-                    st.write(f"• From: {dates.min().strftime('%Y-%m-%d')}")
-                    st.write(f"• To: {dates.max().strftime('%Y-%m-%d')}")
-                    st.write(f"• Records: {len(df_period2):,}")
-        with col_v3:
-            st.write(f"**{period3_label}:**")
-            if len(df_period3) > 0 and 'Date of Complaint' in df_period3.columns:
-                dates = df_period3['Date of Complaint'].dropna()
-                if len(dates) > 0:
-                    st.write(f"• From: {dates.min().strftime('%Y-%m-%d')}")
-                    st.write(f"• To: {dates.max().strftime('%Y-%m-%d')}")
-                    st.write(f"• Records: {len(df_period3):,}")
-
-        st.markdown("---")
-        st.markdown("### Data Quality Metrics")
-        qual_col1, qual_col2 = st.columns(2)
-
-        with qual_col1:
-            st.write(f"**NTC Validation ({period1_label}):**")
-            if 'Agency' in df_period1.columns:
-                ntc_filtered = df_period1[df_period1['Agency'].apply(is_ntc_complaint)]
-                st.write(f"• Total NTC Complaints: {len(ntc_filtered):,}")
-                st.write(f"• Percentage of Total: {(len(ntc_filtered)/len(df_period1)*100):.1f}%")
-                if len(ntc_filtered) > 0 and 'Service Providers' in ntc_filtered.columns:
-                    providers_with_data = ntc_filtered['Service Providers'].notna().sum()
-                    st.write(f"• With Service Provider: {providers_with_data:,}")
-
-        with qual_col2:
-            st.write(f"**PEMEDES Validation ({period1_label}):**")
-            if 'Service Providers' in df_period1.columns:
-                pemedes_filtered = df_period1[df_period1['Service Providers'].apply(is_pemedes_provider)]
-                st.write(f"• Total PEMEDES Complaints: {len(pemedes_filtered):,}")
-                st.write(f"• Percentage of Total: {(len(pemedes_filtered)/len(df_period1)*100):.1f}%")
-                st.write(f"• Unique Providers: {pemedes_filtered['Service Providers'].nunique()}")
-
-                # Show top matched providers for verification
-                if len(pemedes_filtered) > 0:
-                    top_providers = pemedes_filtered['Service Providers'].value_counts().head(5)
-                    st.write("• Top 5 Matched:")
-                    for provider, count in top_providers.items():
-                        st.write(f"  - {provider}: {count}")
-
-        # Data consistency check
-        st.markdown("---")
-        st.markdown("### Data Consistency Check")
-        cons_col1, cons_col2 = st.columns(2)
-
-        with cons_col1:
-            st.write("**Date Range Verification:**")
-            jan_sep_diff = len(df_period1) - len(df_period3)
-            st.write(f"• {period1_label}: {len(df_period1):,} complaints")
-            st.write(f"• {period3_label}: {len(df_period3):,} complaints")
-            st.write(f"• Difference: {jan_sep_diff:,}")
-            if len(df_period3) > len(df_period1):
-                st.error(f"⚠️ {period3_label} has MORE data than {period1_label} - This is incorrect!")
-
-        with cons_col2:
-            st.write("**PEMEDES Subset Verification:**")
-            if 'Service Providers' in df_period1.columns and 'Service Providers' in df_period3.columns:
-                pem_jan = df_period1[df_period1['Service Providers'].apply(is_pemedes_provider)]
-                pem_sep = df_period3[df_period3['Service Providers'].apply(is_pemedes_provider)]
-                st.write(f"• PEMEDES ({period1_label}): {len(pem_jan):,}")
-                st.write(f"• PEMEDES ({period3_label}): {len(pem_sep):,}")
-                st.write(f"• Difference: {len(pem_jan) - len(pem_sep):,}")
-                if len(pem_sep) > len(pem_jan):
-                    st.error("⚠️ Sep PEMEDES has MORE than Jan PEMEDES - This is incorrect!")
 
     # Summary metrics with error handling and enhanced design
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
-        jan_count = len(df_period1)
-        nov_count = len(df_period2)
-        delta_count = jan_count - nov_count
+        period1_count = len(df_period1)
+        period2_count = len(df_period2)
+        delta_count = period1_count - period2_count
         st.metric(
             label=f"{period1_label}",
-            value=f"{jan_count:,}",
+            value=f"{period1_count:,}",
             delta=f"{delta_count:+,} vs {period2_short}",
             delta_color="inverse",
             help=f"Total complaints for {period1_label}"
         )
 
     with col2:
-        nov_count = len(df_period2)
-        nov_pct = (nov_count / jan_count * 100) if jan_count > 0 else 0
+        period2_count = len(df_period2)
+        period2_pct = (period2_count / period1_count * 100) if period1_count > 0 else 0
         st.metric(
             label=f"{period2_label}",
-            value=f"{nov_count:,}",
-            delta=f"{nov_pct:.1f}% of {period1_short}",
+            value=f"{period2_count:,}",
+            delta=f"{period2_pct:.1f}% of {period1_short}",
             delta_color="off",
             help=f"Total complaints for {period2_label}"
         )
@@ -1578,7 +1256,7 @@ def main():
         if 'Agency' in df_period1.columns:
             try:
                 ntc_count = len(df_period1[df_period1['Agency'].apply(is_ntc_complaint)])
-                ntc_pct = (ntc_count / jan_count * 100) if jan_count > 0 else 0
+                ntc_pct = (ntc_count / period1_count * 100) if period1_count > 0 else 0
                 st.metric(
                     label="NTC Complaints",
                     value=f"{ntc_count:,}",
@@ -1595,14 +1273,20 @@ def main():
     with col4:
         if 'Service Providers' in df_period1.columns:
             try:
-                pemedes_count = len(df_period1[df_period1['Service Providers'].apply(is_pemedes_provider)])
-                pemedes_pct = (pemedes_count / jan_count * 100) if jan_count > 0 else 0
+                # Count PEMEDES complaints (providers OR "Delivery Concerns (SP)" OR Agency="PRD")
+                pemedes_mask = df_period1['Service Providers'].apply(is_pemedes_provider)
+                if 'Complaint Category' in df_period1.columns:
+                    pemedes_mask = pemedes_mask | (df_period1['Complaint Category'].astype(str).str.strip().str.upper() == "DELIVERY CONCERNS (SP)")
+                if 'Agency' in df_period1.columns:
+                    pemedes_mask = pemedes_mask | (df_period1['Agency'].astype(str).str.strip().str.upper() == "PRD")
+                pemedes_count = len(df_period1[pemedes_mask])
+                pemedes_pct = (pemedes_count / period1_count * 100) if period1_count > 0 else 0
                 st.metric(
                     label="PEMEDES Complaints",
                     value=f"{pemedes_count:,}",
                     delta=f"{pemedes_pct:.1f}% of total",
                     delta_color="off",
-                    help="Complaints from PEMEDES service providers"
+                    help="Complaints from PEMEDES service providers, Delivery Concerns (SP), or Agency PRD"
                 )
             except Exception as e:
                 st.metric("PEMEDES Complaints", "Error")
@@ -1610,21 +1294,14 @@ def main():
         else:
             st.metric("PEMEDES Complaints", "N/A")
 
-    st.markdown("---")
-
-    # ============================================================================
-    # SECTION 1: OVERALL ANALYSIS
-    # ============================================================================
-    st.markdown("## 📊 Overall Analysis")
-
-    # Overall charts - 4 Charts in 2x2 Grid
-    chart_height = 340
+    # Overall charts - Compact design
+    chart_height = 280
 
     # Row 1: Category and Nature
     col1, col2 = st.columns(2)
 
     with col1:
-        st.markdown(f"#### 📊 Complaints by Category ({period1_label})")
+        st.markdown(f"#### Complaints by Category ({period1_label})")
         if 'Complaint Category' in df_period1.columns:
             valid_data = df_period1['Complaint Category'].dropna()
             valid_data = valid_data[valid_data != '']
@@ -1638,7 +1315,7 @@ def main():
             st.error("'Complaint Category' column not found")
 
     with col2:
-        st.markdown(f"#### 📊 Complaints by Nature ({period1_label})")
+        st.markdown(f"#### Complaints by Nature ({period1_label})")
         if 'Complaint Nature' in df_period1.columns:
             valid_data = df_period1['Complaint Nature'].dropna()
             valid_data = valid_data[valid_data != '']
@@ -1652,7 +1329,7 @@ def main():
             st.error("'Complaint Nature' column not found")
 
     # Monthly Trend
-    st.markdown(f"#### 📈 Monthly Complaint Trend ({period1_label})")
+    st.markdown(f"#### Monthly Complaint Trend ({period1_label})")
     if 'Date of Complaint' in df_period1.columns:
         valid_dates = df_period1['Date of Complaint'].dropna()
         if len(valid_dates) > 0:
@@ -1662,7 +1339,7 @@ def main():
                     'Month': monthly_data.index.astype(str),
                     'Count': monthly_data.values
                 })
-                fig = create_line_chart(df_monthly, 300)
+                fig = create_line_chart(df_monthly, 250)
                 st.plotly_chart(fig, use_container_width=True, key="overall_monthly_trend")
             else:
                 st.info("No monthly data available")
@@ -1673,20 +1350,18 @@ def main():
 
     st.markdown("---")
 
-    # ============================================================================
-    # SECTION 2: NTC ANALYSIS
-    # ============================================================================
-    st.markdown("## 🏢 NTC Analysis")
+    # NTC Analysis
+    st.markdown("### NTC Analysis")
 
     # Filter NTC data with error handling
     if 'Agency' in df_period1.columns:
         try:
             # Use the is_ntc_complaint function for consistent filtering
-            df_ntc_jan = df_period1[df_period1['Agency'].apply(is_ntc_complaint)]
-            df_ntc_sep = df_period3[df_period3['Agency'].apply(is_ntc_complaint)]
+            df_ntc_period1 = df_period1[df_period1['Agency'].apply(is_ntc_complaint)]
+            df_ntc_period3 = df_period3[df_period3['Agency'].apply(is_ntc_complaint)]
 
             # Data integrity check
-            if len(df_ntc_jan) == 0:
+            if len(df_ntc_period1) == 0:
                 st.warning(f"⚠️ No NTC complaints found in {period1_label} dataset. This may indicate:")
                 st.write("• Agency column doesn't contain 'NTC'")
                 st.write("• No NTC-related complaints in this period")
@@ -1694,36 +1369,31 @@ def main():
         except Exception as e:
             st.error(f"❌ Error filtering NTC data: {str(e)}")
             st.info("Please check if the 'Agency' column contains valid text data.")
-            df_ntc_jan = pd.DataFrame()
-            df_ntc_sep = pd.DataFrame()
+            df_ntc_period1 = pd.DataFrame()
+            df_ntc_period3 = pd.DataFrame()
 
         # Enhanced KPI metrics for NTC
         kpi_col1, kpi_col2 = st.columns(2)
         with kpi_col1:
-            ntc_jan_count = len(df_ntc_jan)
-            ntc_jan_pct = (ntc_jan_count / len(df_period1) * 100) if len(df_period1) > 0 else 0
+            ntc_period1_count = len(df_ntc_period1)
+            ntc_period1_pct = (ntc_period1_count / len(df_period1) * 100) if len(df_period1) > 0 else 0
             st.metric(
                 label=f"NTC ({period1_label})",
-                value=f"{ntc_jan_count:,}",
-                delta=f"{ntc_jan_pct:.1f}% of all complaints",
+                value=f"{ntc_period1_count:,}",
+                delta=f"{ntc_period1_pct:.1f}% of all complaints",
                 delta_color="off",
                 help=f"NTC complaints for {period1_label}"
             )
         with kpi_col2:
-            ntc_sep_count = len(df_ntc_sep)
-            ntc_sep_pct = (ntc_sep_count / len(df_period3) * 100) if len(df_period3) > 0 else 0
+            ntc_period3_count = len(df_ntc_period3)
+            ntc_period3_pct = (ntc_period3_count / len(df_period3) * 100) if len(df_period3) > 0 else 0
             st.metric(
                 label=f"NTC ({period3_label})",
-                value=f"{ntc_sep_count:,}",
-                delta=f"{ntc_sep_pct:.1f}% of all complaints",
+                value=f"{ntc_period3_count:,}",
+                delta=f"{ntc_period3_pct:.1f}% of all complaints",
                 delta_color="off",
                 help=f"NTC complaints for {period3_label}"
             )
-
-        # Data accuracy verification
-        st.info(f"ℹ️ **Verification:** {period3_label} ({ntc_sep_count:,}) should be ≤ {period1_label} ({ntc_jan_count:,})")
-        if ntc_sep_count > ntc_jan_count:
-            st.error(f"⚠️ **Data Error:** {period3_label} has MORE NTC complaints than {period1_label}! Please check the date filtering.")
 
         st.markdown("---")
 
@@ -1732,51 +1402,51 @@ def main():
         with col1:
             st.markdown(f"#### Service Providers ({period1_label})")
             # Show date range for {period1_label}
-            if len(df_ntc_jan) > 0 and 'Date of Complaint' in df_ntc_jan.columns:
-                jan_dates = df_ntc_jan['Date of Complaint'].dropna()
-                if len(jan_dates) > 0:
-                    date_range = f"{jan_dates.min().strftime('%b %Y')} - {jan_dates.max().strftime('%b %Y')}"
+            if len(df_ntc_period1) > 0 and 'Date of Complaint' in df_ntc_period1.columns:
+                period1_dates = df_ntc_period1['Date of Complaint'].dropna()
+                if len(period1_dates) > 0:
+                    date_range = f"{period1_dates.min().strftime('%b %Y')} - {period1_dates.max().strftime('%b %Y')}"
                     st.caption(f"📅 {date_range}")
 
-            if 'Service Providers' in df_ntc_jan.columns and len(df_ntc_jan) > 0:
-                valid_data = df_ntc_jan['Service Providers'].dropna()
+            if 'Service Providers' in df_ntc_period1.columns and len(df_ntc_period1) > 0:
+                valid_data = df_ntc_period1['Service Providers'].dropna()
                 valid_data = valid_data[valid_data != '']
 
                 if len(valid_data) > 0:
                     provider_counts = valid_data.value_counts().head(12)
-                    fig = create_bar_chart(provider_counts, "Service Provider", 'greens', 380)
-                    st.plotly_chart(fig, use_container_width=True, key="ntc_providers_jan")
+                    fig = create_bar_chart(provider_counts, "Service Provider", 'greens', 320)
+                    st.plotly_chart(fig, use_container_width=True, key="ntc_providers_period1")
                 else:
                     st.info("📊 No service provider data available")
             else:
-                fig = create_bar_chart(pd.Series(), "Service Provider", 'greens', 380)
-                st.plotly_chart(fig, use_container_width=True, key="ntc_providers_jan_empty")
-                if 'Service Providers' not in df_ntc_jan.columns:
+                fig = create_bar_chart(pd.Series(), "Service Provider", 'greens', 320)
+                st.plotly_chart(fig, use_container_width=True, key="ntc_providers_period1_empty")
+                if 'Service Providers' not in df_ntc_period1.columns:
                     st.error("❌ 'Service Providers' column not found")
 
         with col2:
             st.markdown(f"#### Service Providers ({period3_label})")
             # Show date range for {period3_label}
-            if len(df_ntc_sep) > 0 and 'Date of Complaint' in df_ntc_sep.columns:
-                sep_dates = df_ntc_sep['Date of Complaint'].dropna()
-                if len(sep_dates) > 0:
-                    date_range = f"{sep_dates.min().strftime('%b %Y')} - {sep_dates.max().strftime('%b %Y')}"
+            if len(df_ntc_period3) > 0 and 'Date of Complaint' in df_ntc_period3.columns:
+                period3_dates = df_ntc_period3['Date of Complaint'].dropna()
+                if len(period3_dates) > 0:
+                    date_range = f"{period3_dates.min().strftime('%b %Y')} - {period3_dates.max().strftime('%b %Y')}"
                     st.caption(f"📅 {date_range}")
 
-            if 'Service Providers' in df_ntc_sep.columns and len(df_ntc_sep) > 0:
-                valid_data = df_ntc_sep['Service Providers'].dropna()
+            if 'Service Providers' in df_ntc_period3.columns and len(df_ntc_period3) > 0:
+                valid_data = df_ntc_period3['Service Providers'].dropna()
                 valid_data = valid_data[valid_data != '']
 
                 if len(valid_data) > 0:
                     provider_counts = valid_data.value_counts().head(12)
-                    fig = create_bar_chart(provider_counts, "Service Provider", 'teal', 380)
-                    st.plotly_chart(fig, use_container_width=True, key="ntc_providers_sep")
+                    fig = create_bar_chart(provider_counts, "Service Provider", 'teal', 320)
+                    st.plotly_chart(fig, use_container_width=True, key="ntc_providers_period3")
                 else:
                     st.info("📊 No service provider data available")
             else:
-                fig = create_bar_chart(pd.Series(), "Service Provider", 'teal', 380)
-                st.plotly_chart(fig, use_container_width=True, key="ntc_providers_sep_empty")
-                if 'Service Providers' not in df_ntc_sep.columns:
+                fig = create_bar_chart(pd.Series(), "Service Provider", 'teal', 320)
+                st.plotly_chart(fig, use_container_width=True, key="ntc_providers_period3_empty")
+                if 'Service Providers' not in df_ntc_period3.columns:
                     st.error("❌ 'Service Providers' column not found")
     else:
         st.error("❌ 'Agency' column not found in data. Cannot filter NTC complaints.")
@@ -1784,20 +1454,31 @@ def main():
 
     st.markdown("---")
 
-    # ============================================================================
-    # SECTION 3: PEMEDES ANALYSIS
-    # ============================================================================
-    st.markdown("## 📦 PEMEDES Analysis")
+    # PEMEDES Analysis
+    st.markdown("### PEMEDES Analysis")
 
     # Filter PEMEDES data with error handling
     if 'Service Providers' in df_period1.columns:
         try:
             # Filter by checking if Service Provider is in PEMEDES_PROVIDERS list
-            df_pemedes_jan = df_period1[df_period1['Service Providers'].apply(is_pemedes_provider)]
-            df_pemedes_sep = df_period3[df_period3['Service Providers'].apply(is_pemedes_provider)]
+            # OR if Complaint Category is "Delivery Concerns (SP)"
+            # OR if Agency is "PRD"
+            pemedes_mask_period1 = df_period1['Service Providers'].apply(is_pemedes_provider)
+            if 'Complaint Category' in df_period1.columns:
+                pemedes_mask_period1 = pemedes_mask_period1 | (df_period1['Complaint Category'].astype(str).str.strip().str.upper() == "DELIVERY CONCERNS (SP)")
+            if 'Agency' in df_period1.columns:
+                pemedes_mask_period1 = pemedes_mask_period1 | (df_period1['Agency'].astype(str).str.strip().str.upper() == "PRD")
+            df_pemedes_period1 = df_period1[pemedes_mask_period1]
+
+            pemedes_mask_period3 = df_period3['Service Providers'].apply(is_pemedes_provider)
+            if 'Complaint Category' in df_period3.columns:
+                pemedes_mask_period3 = pemedes_mask_period3 | (df_period3['Complaint Category'].astype(str).str.strip().str.upper() == "DELIVERY CONCERNS (SP)")
+            if 'Agency' in df_period3.columns:
+                pemedes_mask_period3 = pemedes_mask_period3 | (df_period3['Agency'].astype(str).str.strip().str.upper() == "PRD")
+            df_pemedes_period3 = df_period3[pemedes_mask_period3]
 
             # Data integrity check
-            if len(df_pemedes_jan) == 0:
+            if len(df_pemedes_period1) == 0:
                 st.warning(f"⚠️ No PEMEDES complaints found in {period1_label} dataset. This may indicate:")
                 st.write("• Service provider names don't match the PEMEDES provider list")
                 st.write("• No PEMEDES-related complaints in this period")
@@ -1805,36 +1486,31 @@ def main():
         except Exception as e:
             st.error(f"❌ Error filtering PEMEDES data: {str(e)}")
             st.info("Please check if the 'Service Providers' column contains valid text data.")
-            df_pemedes_jan = pd.DataFrame()
-            df_pemedes_sep = pd.DataFrame()
+            df_pemedes_period1 = pd.DataFrame()
+            df_pemedes_period3 = pd.DataFrame()
 
         # Enhanced KPI metrics for PEMEDES
         kpi_col1, kpi_col2 = st.columns(2)
         with kpi_col1:
-            pemedes_jan_count = len(df_pemedes_jan)
-            pemedes_jan_pct = (pemedes_jan_count / len(df_period1) * 100) if len(df_period1) > 0 else 0
+            pemedes_period1_count = len(df_pemedes_period1)
+            pemedes_period1_pct = (pemedes_period1_count / len(df_period1) * 100) if len(df_period1) > 0 else 0
             st.metric(
                 label=f"PEMEDES ({period1_label})",
-                value=f"{pemedes_jan_count:,}",
-                delta=f"{pemedes_jan_pct:.1f}% of all complaints",
+                value=f"{pemedes_period1_count:,}",
+                delta=f"{pemedes_period1_pct:.1f}% of all complaints",
                 delta_color="off",
                 help=f"PEMEDES complaints for {period1_label}"
             )
         with kpi_col2:
-            pemedes_sep_count = len(df_pemedes_sep)
-            pemedes_sep_pct = (pemedes_sep_count / len(df_period3) * 100) if len(df_period3) > 0 else 0
+            pemedes_period3_count = len(df_pemedes_period3)
+            pemedes_period3_pct = (pemedes_period3_count / len(df_period3) * 100) if len(df_period3) > 0 else 0
             st.metric(
                 label=f"PEMEDES ({period3_label})",
-                value=f"{pemedes_sep_count:,}",
-                delta=f"{pemedes_sep_pct:.1f}% of all complaints",
+                value=f"{pemedes_period3_count:,}",
+                delta=f"{pemedes_period3_pct:.1f}% of all complaints",
                 delta_color="off",
                 help=f"PEMEDES complaints for {period3_label}"
             )
-
-        # Data accuracy verification
-        st.info(f"ℹ️ **Verification:** {period3_label} ({pemedes_sep_count:,}) should be ≤ {period1_label} ({pemedes_jan_count:,})")
-        if pemedes_sep_count > pemedes_jan_count:
-            st.error(f"⚠️ **Data Error:** {period3_label} has MORE PEMEDES complaints than {period1_label}! Please check the date filtering.")
 
         st.markdown("---")
 
@@ -1843,51 +1519,51 @@ def main():
         with col1:
             st.markdown(f"#### Service Providers ({period1_label})")
             # Show date range for {period1_label}
-            if len(df_pemedes_jan) > 0 and 'Date of Complaint' in df_pemedes_jan.columns:
-                jan_dates = df_pemedes_jan['Date of Complaint'].dropna()
-                if len(jan_dates) > 0:
-                    date_range = f"{jan_dates.min().strftime('%b %Y')} - {jan_dates.max().strftime('%b %Y')}"
+            if len(df_pemedes_period1) > 0 and 'Date of Complaint' in df_pemedes_period1.columns:
+                period1_dates = df_pemedes_period1['Date of Complaint'].dropna()
+                if len(period1_dates) > 0:
+                    date_range = f"{period1_dates.min().strftime('%b %Y')} - {period1_dates.max().strftime('%b %Y')}"
                     st.caption(f"📅 {date_range}")
 
-            if 'Service Providers' in df_pemedes_jan.columns and len(df_pemedes_jan) > 0:
-                valid_data = df_pemedes_jan['Service Providers'].dropna()
+            if 'Service Providers' in df_pemedes_period1.columns and len(df_pemedes_period1) > 0:
+                valid_data = df_pemedes_period1['Service Providers'].dropna()
                 valid_data = valid_data[valid_data != '']
 
                 if len(valid_data) > 0:
                     provider_counts = valid_data.value_counts().head(12)
-                    fig = create_bar_chart(provider_counts, "Service Provider", 'purples', 380)
-                    st.plotly_chart(fig, use_container_width=True, key="pemedes_providers_jan")
+                    fig = create_bar_chart(provider_counts, "Service Provider", 'purples', 320)
+                    st.plotly_chart(fig, use_container_width=True, key="pemedes_providers_period1")
                 else:
                     st.info("📊 No service provider data available")
             else:
-                fig = create_bar_chart(pd.Series(), "Service Provider", 'purples', 380)
-                st.plotly_chart(fig, use_container_width=True, key="pemedes_providers_jan_empty")
-                if 'Service Providers' not in df_pemedes_jan.columns:
+                fig = create_bar_chart(pd.Series(), "Service Provider", 'purples', 320)
+                st.plotly_chart(fig, use_container_width=True, key="pemedes_providers_period1_empty")
+                if 'Service Providers' not in df_pemedes_period1.columns:
                     st.error("❌ 'Service Providers' column not found")
 
         with col2:
             st.markdown(f"#### Service Providers ({period3_label})")
             # Show date range for {period3_label}
-            if len(df_pemedes_sep) > 0 and 'Date of Complaint' in df_pemedes_sep.columns:
-                sep_dates = df_pemedes_sep['Date of Complaint'].dropna()
-                if len(sep_dates) > 0:
-                    date_range = f"{sep_dates.min().strftime('%b %Y')} - {sep_dates.max().strftime('%b %Y')}"
+            if len(df_pemedes_period3) > 0 and 'Date of Complaint' in df_pemedes_period3.columns:
+                period3_dates = df_pemedes_period3['Date of Complaint'].dropna()
+                if len(period3_dates) > 0:
+                    date_range = f"{period3_dates.min().strftime('%b %Y')} - {period3_dates.max().strftime('%b %Y')}"
                     st.caption(f"📅 {date_range}")
 
-            if 'Service Providers' in df_pemedes_sep.columns and len(df_pemedes_sep) > 0:
-                valid_data = df_pemedes_sep['Service Providers'].dropna()
+            if 'Service Providers' in df_pemedes_period3.columns and len(df_pemedes_period3) > 0:
+                valid_data = df_pemedes_period3['Service Providers'].dropna()
                 valid_data = valid_data[valid_data != '']
 
                 if len(valid_data) > 0:
                     provider_counts = valid_data.value_counts().head(12)
-                    fig = create_bar_chart(provider_counts, "Service Provider", 'magenta', 380)
-                    st.plotly_chart(fig, use_container_width=True, key="pemedes_providers_sep")
+                    fig = create_bar_chart(provider_counts, "Service Provider", 'magenta', 320)
+                    st.plotly_chart(fig, use_container_width=True, key="pemedes_providers_period3")
                 else:
                     st.info("📊 No service provider data available")
             else:
-                fig = create_bar_chart(pd.Series(), "Service Provider", 'magenta', 380)
-                st.plotly_chart(fig, use_container_width=True, key="pemedes_providers_sep_empty")
-                if 'Service Providers' not in df_pemedes_sep.columns:
+                fig = create_bar_chart(pd.Series(), "Service Provider", 'magenta', 320)
+                st.plotly_chart(fig, use_container_width=True, key="pemedes_providers_period3_empty")
+                if 'Service Providers' not in df_pemedes_period3.columns:
                     st.error("❌ 'Service Providers' column not found")
     else:
         st.error("❌ 'Service Providers' column not found in data. Cannot filter PEMEDES complaints.")
@@ -1899,21 +1575,70 @@ def main():
         for warning in data_warnings:
             st.caption(warning)
 
+    # Data Validation & Integrity - Moved to bottom
+    st.markdown("---")
+    with st.expander("📊 Data Validation & Integrity", expanded=False):
+        # Period summaries
+        col_v1, col_v2, col_v3 = st.columns(3)
+
+        for col, df_period, label in [(col_v1, df_period1, period1_label),
+                                       (col_v2, df_period2, period2_label),
+                                       (col_v3, df_period3, period3_label)]:
+            with col:
+                st.write(f"**{label}**")
+                if len(df_period) > 0 and 'Date of Complaint' in df_period.columns:
+                    dates = df_period['Date of Complaint'].dropna()
+                    if len(dates) > 0:
+                        st.caption(f"{dates.min().strftime('%Y-%m-%d')} to {dates.max().strftime('%Y-%m-%d')}")
+                        st.metric("Records", f"{len(df_period):,}", label_visibility="collapsed")
+
+        st.markdown("---")
+
+        # Filter validation and integrity checks
+        integrity_col1, integrity_col2 = st.columns(2)
+
+        with integrity_col1:
+            st.write("**Filter Validation:**")
+            if 'Agency' in df_period1.columns:
+                ntc_count = len(df_period1[df_period1['Agency'].apply(is_ntc_complaint)])
+                st.write(f"NTC: {ntc_count:,} ({(ntc_count/len(df_period1)*100):.1f}%)")
+
+            if 'Service Providers' in df_period1.columns:
+                # Use consistent PEMEDES filter
+                pemedes_mask = df_period1['Service Providers'].apply(is_pemedes_provider)
+                if 'Complaint Category' in df_period1.columns:
+                    pemedes_mask = pemedes_mask | (df_period1['Complaint Category'].astype(str).str.strip().str.upper() == "DELIVERY CONCERNS (SP)")
+                if 'Agency' in df_period1.columns:
+                    pemedes_mask = pemedes_mask | (df_period1['Agency'].astype(str).str.strip().str.upper() == "PRD")
+                pem_count = len(df_period1[pemedes_mask])
+                st.write(f"PEMEDES: {pem_count:,} ({(pem_count/len(df_period1)*100):.1f}%)")
+
+        with integrity_col2:
+            st.write("**Integrity Check:**")
+            # Verify Period3 ≤ Period1 (subset relationship)
+            subset_valid = len(df_period3) <= len(df_period1)
+            if subset_valid:
+                st.success(f"✓ {period3_short} ⊆ {period1_short}")
+            else:
+                st.error(f"✗ {period3_short} > {period1_short}")
+
+            # Verify Period2 relationship
+            period2_valid = len(df_period2) <= len(df_period1)
+            if period2_valid:
+                st.success(f"✓ {period2_short} ⊆ {period1_short}")
+            else:
+                st.error(f"✗ {period2_short} > {period1_short}")
+
     # Footer
     st.markdown("---")
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        st.markdown(f"*Dashboard last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*")
-    with col2:
-        if st.button("🗑️ Clear Cache"):
-            st.cache_data.clear()
-            st.success("Cache cleared!")
+    st.markdown(f"*Dashboard last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*")
 
-    # Auto-refresh mechanism
+    # Auto-refresh mechanism - Simple and robust using meta refresh
     if st.session_state.auto_refresh:
-        time.sleep(st.session_state.refresh_interval)
-        st.cache_data.clear()
-        st.rerun()
+        st.markdown(
+            f'<meta http-equiv="refresh" content="{st.session_state.refresh_interval}">',
+            unsafe_allow_html=True
+        )
 
 if __name__ == "__main__":
     main()
