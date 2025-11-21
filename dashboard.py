@@ -10,6 +10,7 @@ import openpyxl
 import numpy as np
 import re
 from dateutil import parser as date_parser
+import os
 
 # Column mapping
 COLUMN_LABELS = {
@@ -943,14 +944,13 @@ def main():
 
     # Load default Google Sheets URL from secrets (secure)
     # SECURITY: URL is stored in .streamlit/secrets.toml and not exposed in code
-    try:
-        DEFAULT_GSHEET_URL = st.secrets["default_sheet"]["url"]
-        DEFAULT_SHEET_AVAILABLE = True
-        if 'gsheet_url' in st.session_state and not st.session_state.gsheet_url:
-            st.session_state.gsheet_url = DEFAULT_GSHEET_URL
-    except:
-        DEFAULT_GSHEET_URL = ""
-        DEFAULT_SHEET_AVAILABLE = False
+    # Use the provided default Google Sheet URL as the app default (always)
+    DEFAULT_GSHEET_URL = "https://docs.google.com/spreadsheets/d/1JDd0-4JffW5PB34XKDWaKDfPM-jQ22z1VXeCX1WpKGw/edit?usp=sharing"
+    DEFAULT_SHEET_AVAILABLE = True
+
+    # Prefill session state with default (always show this URL by default)
+    if 'gsheet_url' in st.session_state:
+        st.session_state.gsheet_url = DEFAULT_GSHEET_URL
     
     # Dashboard header
     st.markdown('<h1 style="font-size: 2rem; font-weight: 700; margin-bottom: 0.75rem;">📊 Complaint Analysis Dashboard</h1>', unsafe_allow_html=True)

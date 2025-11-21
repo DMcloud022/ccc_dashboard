@@ -32,6 +32,8 @@ Dashboard opens at `http://localhost:8501`
 - Requires Google Cloud service account setup
 - Follow detailed instructions in README.md
 
+<!-- Deployment defaults and sample fallback removed — app now uses the fixed default Google Sheet URL. -->
+
 ### Step 3: Connect to Dashboard
 
 1. In the sidebar, select **"Google Sheets"**
