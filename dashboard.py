@@ -145,7 +145,6 @@ PEMEDES_PROVIDERS = [
     "Flash Express",
     "Grab Express",
     "GrabExpress",
-    "Lalamove",
     "Airspeed",
     "Air21",
     "Black Arrow",
@@ -236,6 +235,45 @@ CUSTOM_CSS = """
         padding-right: 0.5rem;
         max-width: 100%;
         background-color: white;
+    }
+
+    /* Sidebar specific styling for compression */
+    [data-testid="stSidebar"] .block-container {
+        padding-top: 1rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    
+    [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {
+        margin-top: 0;
+        padding-top: 0;
+        margin-bottom: 0.5rem;
+        font-size: 1.1rem !important;
+    }
+
+    /* Compact metrics in sidebar */
+    [data-testid="stSidebar"] [data-testid="stMetricValue"] {
+        font-size: 1.2rem !important;
+        padding: 0 !important;
+    }
+    
+    [data-testid="stSidebar"] [data-testid="stMetricLabel"] {
+        font-size: 0.8rem !important;
+    }
+    
+    [data-testid="stSidebar"] div[data-testid="stMetric"] {
+        padding: 0.5rem !important;
+        margin: 0 !important;
+        border: none !important;
+    }
+    
+    /* Reduce spacing between elements in sidebar */
+    [data-testid="stSidebar"] .stElementContainer {
+        margin-bottom: 0.5rem;
+    }
+    
+    [data-testid="stSidebar"] hr {
+        margin: 0.5rem 0;
     }
 
     /* Header styling - Hierarchical sizes */
@@ -474,7 +512,6 @@ def load_data_from_public_gsheet(spreadsheet_url, timestamp):
                 st.warning("⚠️ Sheet appears to be empty")
                 return None
             
-            st.success(f"✅ Successfully loaded {len(df)} rows from public Google Sheets")
             return df
             
         except Exception as e:
@@ -526,8 +563,6 @@ def load_data_from_gsheet_with_auth(credentials_dict, spreadsheet_url, timestamp
         
         # Clean column names (strip whitespace)
         df.columns = df.columns.str.strip()
-        
-        st.success(f"✅ Successfully loaded {len(df)} rows from Google Sheets (authenticated)")
         
         return df
         
@@ -746,7 +781,7 @@ def prepare_data(df):
                 return name
             name_str = str(name).strip()
             name_lower = name_str.lower()
-            return PROVIDER_ALIASES.get(name_lower, name_str)
+            return PROVIDER_ALIASES.get(name_lower, name_lower)
 
         df['Service Providers'] = df['Service Providers'].apply(normalize_provider)
 
@@ -987,6 +1022,58 @@ def create_line_chart(df_monthly, height=500):
     )
     return fig
 
+def render_comparison_charts(df_period1, df_period3, period1_label, period3_label, color_theme1, color_theme2, key_prefix):
+    """Render side-by-side service provider charts for comparison"""
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown(f"#### Service Providers ({period1_label})")
+        if len(df_period1) > 0 and 'Date of Complaint' in df_period1.columns:
+            period1_dates = df_period1['Date of Complaint'].dropna()
+            if len(period1_dates) > 0:
+                date_range = f"{period1_dates.min().strftime('%b %Y')} - {period1_dates.max().strftime('%b %Y')}"
+                st.caption(f"📅 {date_range}")
+
+        if 'Service Providers' in df_period1.columns and len(df_period1) > 0:
+            valid_data = df_period1['Service Providers'].dropna()
+            valid_data = valid_data[valid_data != '']
+
+            if len(valid_data) > 0:
+                provider_counts = valid_data.value_counts().head(12)
+                fig = create_bar_chart(provider_counts, "Service Provider", color_theme1, 400)
+                st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}_period1")
+            else:
+                st.info("📊 No service provider data available")
+        else:
+            fig = create_bar_chart(pd.Series(), "Service Provider", color_theme1, 400)
+            st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}_period1_empty")
+            if 'Service Providers' not in df_period1.columns:
+                st.error("❌ 'Service Providers' column not found")
+
+    with col2:
+        st.markdown(f"#### Service Providers ({period3_label})")
+        if len(df_period3) > 0 and 'Date of Complaint' in df_period3.columns:
+            period3_dates = df_period3['Date of Complaint'].dropna()
+            if len(period3_dates) > 0:
+                date_range = f"{period3_dates.min().strftime('%b %Y')} - {period3_dates.max().strftime('%b %Y')}"
+                st.caption(f"📅 {date_range}")
+
+        if 'Service Providers' in df_period3.columns and len(df_period3) > 0:
+            valid_data = df_period3['Service Providers'].dropna()
+            valid_data = valid_data[valid_data != '']
+
+            if len(valid_data) > 0:
+                provider_counts = valid_data.value_counts().head(12)
+                fig = create_bar_chart(provider_counts, "Service Provider", color_theme2, 400)
+                st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}_period3")
+            else:
+                st.info("📊 No service provider data available")
+        else:
+            fig = create_bar_chart(pd.Series(), "Service Provider", color_theme2, 400)
+            st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}_period3_empty")
+            if 'Service Providers' not in df_period3.columns:
+                st.error("❌ 'Service Providers' column not found")
+
 def main():
     # Initialize session state FIRST - before any other code
     if 'auto_refresh' not in st.session_state:
@@ -1024,250 +1111,232 @@ def main():
     
     # Sidebar for data loading and settings
     with st.sidebar:
-        st.header("🔧 Data Source")
-        data_source = st.radio("Choose data source:", ["Google Sheets (Public)", "Upload Excel", "Excel File Path", "Google Sheets (Private)"])
+        st.markdown("### ⚙️ Settings")
+        
+        # Simplified Data Source Selection
+        st.caption("Data Source")
+        data_source = st.selectbox(
+            "Data Source", 
+            ["Google Sheets (Public)", "Upload Excel", "Excel File Path", "Google Sheets (Private)"],
+            index=0,
+            label_visibility="collapsed"
+        )
         
         df = None
         
         if data_source == "Google Sheets (Public)":
-            st.info("📋 For public sheets - easiest option!")
-            st.markdown("""
-            **How to make your sheet public:**
-            1. Open your Google Sheet
-            2. Click **Share** button
-            3. Change to **"Anyone with the link"**
-            4. Set permission to **Viewer**
-            5. Copy the link and paste below
-            """)
-            
             spreadsheet_url = st.text_input(
-                "Google Sheet URL", 
+                "Sheet URL", 
                 value=st.session_state.gsheet_url or "",
-                placeholder="https://docs.google.com/spreadsheets/d/..."
+                placeholder="Paste 'Anyone with the link' URL here...",
+                label_visibility="collapsed"
             )
             
             if spreadsheet_url:
                 st.session_state.gsheet_url = spreadsheet_url
-
-                # Simple robust caching: round timestamp to refresh interval
-                # This ensures cache updates at regular intervals for real-time data
                 interval = st.session_state.refresh_interval if st.session_state.auto_refresh else 60
                 current_time = int(datetime.now().timestamp() // interval) * interval
-
                 df = load_data_from_public_gsheet(spreadsheet_url, current_time)
                 st.session_state.data_source_type = "gsheets_public"
         
         elif data_source == "Upload Excel":
-            uploaded_file = st.file_uploader("Upload your Excel file (.xlsx)", type=['xlsx', 'xls'])
+            uploaded_file = st.file_uploader("Upload .xlsx", type=['xlsx', 'xls'], label_visibility="collapsed")
             if uploaded_file is not None:
                 df = load_data_from_uploaded_excel(uploaded_file)
                 st.session_state.data_source_type = "upload"
         
         elif data_source == "Excel File Path":
-            file_path = st.text_input("Enter full path to Excel file:", 
-                                     value=st.session_state.file_path or "",
-                                     placeholder="e.g., C:/Data/complaints.xlsx")
+            file_path = st.text_input("File Path", value=st.session_state.file_path or "", placeholder="C:/path/to/file.xlsx", label_visibility="collapsed")
             if file_path:
                 st.session_state.file_path = file_path
                 df = load_data_from_excel(file_path)
                 st.session_state.data_source_type = "filepath"
         
         else:  # Google Sheets (Private)
-            st.info("📋 For private sheets - requires authentication")
-            st.markdown("""
-            **Setup Steps:**
-            1. Create service account in Google Cloud
-            2. Enable Google Sheets API
-            3. Share sheet with service account email
-            4. Upload credentials JSON below
-            """)
-            
-            # Check if credentials already in session
             if st.session_state.gsheet_creds is None:
-                credentials_file = st.file_uploader("Upload Service Account JSON", type=['json'])
+                credentials_file = st.file_uploader("Service Account JSON", type=['json'], label_visibility="collapsed")
                 if credentials_file:
                     import json
                     st.session_state.gsheet_creds = json.load(credentials_file)
-                    st.success("✅ Credentials loaded")
+                    st.success("Credentials loaded")
             else:
-                st.success("✅ Credentials active")
-                if st.button("Clear Credentials"):
+                if st.button("Clear Credentials", use_container_width=True):
                     st.session_state.gsheet_creds = None
                     st.rerun()
             
             spreadsheet_url = st.text_input(
-                "Google Sheet URL", 
+                "Sheet URL", 
                 value=st.session_state.gsheet_url or "",
-                placeholder="https://docs.google.com/spreadsheets/d/..."
+                placeholder="Paste Sheet URL here...",
+                label_visibility="collapsed"
             )
             
             if spreadsheet_url:
                 st.session_state.gsheet_url = spreadsheet_url
             
             if st.session_state.gsheet_creds and st.session_state.gsheet_url:
-                # Simple robust caching: round timestamp to refresh interval
-                # This ensures cache updates at regular intervals for real-time data
                 interval = st.session_state.refresh_interval if st.session_state.auto_refresh else 60
                 current_time = int(datetime.now().timestamp() // interval) * interval
-
-                df = load_data_from_gsheet_with_auth(
-                    st.session_state.gsheet_creds,
-                    st.session_state.gsheet_url,
-                    current_time
-                )
+                df = load_data_from_gsheet_with_auth(st.session_state.gsheet_creds, st.session_state.gsheet_url, current_time)
                 st.session_state.data_source_type = "gsheets_private"
         
         if df is not None and not df.empty:
-            st.success(f"✅ Data loaded: {len(df)} records")
-            st.caption(f"Last updated: {datetime.now().strftime('%H:%M:%S')}")
-
-            # Show column info and data preview
-            with st.expander("📋 Column Information & Data Preview"):
-                st.write(f"**Total columns:** {len(df.columns)}")
-                st.write("**Available columns:")
-                for col in df.columns:
-                    st.text(f"  • {col}")
-
-                st.markdown("---")
-                st.write("**Data Preview (First 5 rows):")
-                st.dataframe(df.head(), use_container_width=True)
-
-                # Show data types
-                st.markdown("---")
-                st.write("**Column Data Types:")
-                dtype_df = pd.DataFrame({
-                    'Column': df.dtypes.index,
-                    'Type': df.dtypes.values.astype(str)
-                })
-                st.dataframe(dtype_df, use_container_width=True)
+            st.divider()
             
-            st.markdown("---")
-            
-            # Auto-refresh settings
-            st.header("🔄 Real-time Settings")
-            auto_refresh = st.checkbox("Enable Auto-refresh", value=st.session_state.auto_refresh)
-            st.session_state.auto_refresh = auto_refresh
+            # Row 2: Refresh Controls
+            st.markdown("**Auto-Refresh**")
+            col_r1, col_r2 = st.columns([3, 1])
+            with col_r1:
+                auto_refresh = st.toggle("Enable", value=st.session_state.auto_refresh)
+                st.session_state.auto_refresh = auto_refresh
+            with col_r2:
+                if st.button("↻", help="Refresh Now"):
+                    st.cache_data.clear()
+                    st.rerun()
             
             if auto_refresh:
-                refresh_interval = st.selectbox(
-                    "Refresh interval (seconds):",
-                    [30, 60, 120, 300],
-                    index=3
+                st.select_slider(
+                    "Interval (seconds)", 
+                    options=[30, 60, 120, 300], 
+                    value=st.session_state.refresh_interval,
+                    key="refresh_interval_slider",
+                    on_change=lambda: st.session_state.update(refresh_interval=st.session_state.refresh_interval_slider)
                 )
-                st.session_state.refresh_interval = refresh_interval
 
-                st.info(f"⏱️ Auto-refreshing every {refresh_interval}s")
+            # Compact Data Preview
+            with st.expander("📋 View Data", expanded=False):
+                st.dataframe(df.head(3), use_container_width=True, height=150)    # Determine refresh rate for the fragment
+    # If data source is uploaded file, auto-refresh is not needed unless explicitly desired (but file won't change)
+    # For now, we respect the user's auto-refresh setting for all sources
+    refresh_rate = st.session_state.refresh_interval if st.session_state.auto_refresh else None
 
-            # Cache management buttons
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("🔄 Refresh Now", use_container_width=True):
-                    st.cache_data.clear()
-                    st.rerun()
-            with col2:
-                if st.button("🗑️ Clear Cache", use_container_width=True):
-                    st.cache_data.clear()
-                    st.success("✓ Cleared!")
-                    st.rerun()
+    @st.fragment(run_every=refresh_rate)
+    def render_dashboard_content(initial_df=None):
+        # Re-calculate timestamp for cache busting within the fragment
+        interval = st.session_state.refresh_interval if st.session_state.auto_refresh else 60
+        current_time = int(datetime.now().timestamp() // interval) * interval
+        
+        df = None
+        source_type = st.session_state.get('data_source_type')
+        
+        # Logic to determine df
+        if source_type == 'upload':
+            # For upload, we rely on the dataframe passed from the main script
+            df = initial_df
+        elif source_type == 'gsheets_public':
+            url = st.session_state.get('gsheet_url')
+            if url:
+                df = load_data_from_public_gsheet(url, current_time)
+        elif source_type == 'filepath':
+            path = st.session_state.get('file_path')
+            if path:
+                df = load_data_from_excel(path)
+        elif source_type == 'gsheets_private':
+            creds = st.session_state.get('gsheet_creds')
+            url = st.session_state.get('gsheet_url')
+            if creds and url:
+                df = load_data_from_gsheet_with_auth(creds, url, current_time)
+        
+        # Fallback to initial_df if reload failed but we had data
+        if df is None and initial_df is not None and source_type != 'upload':
+             df = initial_df
+
+        if df is None or df.empty:
+            st.info("👈 Please load data from the sidebar to begin analysis")
+            st.markdown("""
+            ### 📖 Quick Start Guide:
             
-            st.markdown("---")
+            #### 🌐 Option 1: Google Sheets (Public) - **RECOMMENDED**
+            - **Easiest for presentations!**
+            - Open your Google Sheet
+            - Click Share → "Anyone with the link can view"
+            - Copy the URL and paste in sidebar
+            - ✅ No authentication needed!
             
-            # Date range info
-            st.header("📅 Analysis Period")
-            current_year = datetime.now().year
-            st.info(f"Current Year: {current_year}")
-        elif df is not None:
-            st.warning("⚠️ Data loaded but empty")
-    
-    if df is None or df.empty:
-        st.info("👈 Please load data from the sidebar to begin analysis")
-        st.markdown("""
-        ### 📖 Quick Start Guide:
-        
-        #### 🌐 Option 1: Google Sheets (Public) - **RECOMMENDED**
-        - **Easiest for presentations!**
-        - Open your Google Sheet
-        - Click Share → "Anyone with the link can view"
-        - Copy the URL and paste in sidebar
-        - ✅ No authentication needed!
-        
-        #### 📤 Option 2: Upload Excel
-        - Export your Google Sheet as .xlsx
-        - Upload file directly
-        
-        #### 📁 Option 3: Excel File Path
-        - For real-time monitoring from local file
-        - Enter full path to .xlsx file
-        
-        #### 🔒 Option 4: Google Sheets (Private)
-        - For private/restricted sheets
-        - Requires service account setup
-        
-        ### 📊 Required Columns:
-        - **Date of Complaint** (Required)
-        - Complaint Category
-        - Complaint Nature
-        - Service Providers
-        - Agency
-        """)
-        return
-    
-    # Prepare data with progress
-    with st.spinner("🔄 Processing data and parsing dates..."):
+            #### 📤 Option 2: Upload Excel
+            - Export your Google Sheet as .xlsx
+            - Upload file directly
+            
+            #### 📁 Option 3: Excel File Path
+            - For real-time monitoring from local file
+            - Enter full path to .xlsx file
+            
+            #### 🔒 Option 4: Google Sheets (Private)
+            - For private/restricted sheets
+            - Requires service account setup
+            """)
+            return
+
+        # Prepare data
+        # We process the data here to ensure fresh data is always cleaned
+        # Use a subtle spinner or none for auto-updates to avoid flickering
         df, data_warnings = prepare_data(df)
 
-    if df is None or df.empty:
-        st.error("❌ No valid data after processing. Please check your date formats.")
-        return
-    
-    # Dynamically detect date range and create flexible filters
-    # Get the actual date range from the data
-    if 'Date of Complaint' in df.columns:
-        valid_dates = df['Date of Complaint'].dropna()
-        if len(valid_dates) > 0:
-            min_date = valid_dates.min()
-            max_date = valid_dates.max()
+        if df is None or df.empty:
+            st.error("❌ No valid data after processing. Please check your date formats.")
+            return
+        
+        # Dynamically detect date range and create flexible filters
+        # Get the actual date range from the data
+        if 'Date of Complaint' in df.columns:
+            valid_dates = df['Date of Complaint'].dropna()
+            if len(valid_dates) > 0:
+                min_date = valid_dates.min()
+                max_date = valid_dates.max()
 
-            # Calculate dynamic date ranges based on actual data
-            # Period 1: Year-to-Date (from start of current year to present)
-            current_year = max_date.year
-            ytd_start = pd.Timestamp(year=current_year, month=1, day=1)
+                # Calculate dynamic date ranges based on actual data
+                # Period 1: Year-to-Date (from start of current year to present)
+                current_year = max_date.year
+                ytd_start = pd.Timestamp(year=current_year, month=1, day=1)
 
-            # Period 2: Last Quarter (3 months from max date)
-            last_quarter_start = max_date - pd.DateOffset(months=3)
+                # Period 2: Last Quarter (3 months from max date)
+                last_quarter_start = max_date - pd.DateOffset(months=3)
 
-            # Period 3: Last Month (1 month from max date)
-            last_month_start = max_date - pd.DateOffset(months=1)
+                # Period 3: Last Month (1 month from max date)
+                last_month_start = max_date - pd.DateOffset(months=1)
 
-            # Create filtered datasets
-            try:
-                df_period1 = df[df['Date of Complaint'] >= ytd_start].copy()
-                period1_label = f"{ytd_start.strftime('%b %Y')} - Present"
-                period1_short = "YTD"
-            except:
+                # Create filtered datasets
+                try:
+                    df_period1 = df[df['Date of Complaint'] >= ytd_start].copy()
+                    period1_label = f"{ytd_start.strftime('%b %Y')} - Present"
+                    period1_short = "YTD"
+                except:
+                    df_period1 = df.copy()
+                    period1_label = "All Data"
+                    period1_short = "All"
+
+                try:
+                    df_period2 = df[df['Date of Complaint'] >= last_quarter_start].copy()
+                    period2_label = f"Last 3 Months ({last_quarter_start.strftime('%b %Y')} - Present)"
+                    period2_short = "3M"
+                except:
+                    df_period2 = df.copy()
+                    period2_label = "All Data"
+                    period2_short = "All"
+
+                try:
+                    df_period3 = df[df['Date of Complaint'] >= last_month_start].copy()
+                    period3_label = f"Last Month ({last_month_start.strftime('%b %Y')} - Present)"
+                    period3_short = "1M"
+                except:
+                    df_period3 = df.copy()
+                    period3_label = "All Data"
+                    period3_short = "All"
+            else:
+                # No valid dates, use all data
                 df_period1 = df.copy()
-                period1_label = "All Data"
-                period1_short = "All"
-
-            try:
-                df_period2 = df[df['Date of Complaint'] >= last_quarter_start].copy()
-                period2_label = f"Last 3 Months ({last_quarter_start.strftime('%b %Y')} - Present)"
-                period2_short = "3M"
-            except:
                 df_period2 = df.copy()
-                period2_label = "All Data"
-                period2_short = "All"
-
-            try:
-                df_period3 = df[df['Date of Complaint'] >= last_month_start].copy()
-                period3_label = f"Last Month ({last_month_start.strftime('%b %Y')} - Present)"
-                period3_short = "1M"
-            except:
                 df_period3 = df.copy()
+                period1_label = "All Data"
+                period2_label = "All Data"
                 period3_label = "All Data"
+                period1_short = "All"
+                period2_short = "All"
                 period3_short = "All"
+                min_date = None
+                max_date = None
         else:
-            # No valid dates, use all data
+            # No date column, use all data
             df_period1 = df.copy()
             df_period2 = df.copy()
             df_period3 = df.copy()
@@ -1279,433 +1348,329 @@ def main():
             period3_short = "All"
             min_date = None
             max_date = None
-    else:
-        # No date column, use all data
-        df_period1 = df.copy()
-        df_period2 = df.copy()
-        df_period3 = df.copy()
-        period1_label = "All Data"
-        period2_label = "All Data"
-        period3_label = "All Data"
-        period1_short = "All"
-        period2_short = "All"
-        period3_short = "All"
-        min_date = None
-        max_date = None
 
-    # Summary metrics with error handling and enhanced design
-    col1, col2, col3, col4 = st.columns(4)
+        # Summary metrics with error handling and enhanced design
+        col1, col2, col3, col4 = st.columns(4)
 
-    with col1:
-        period1_count = len(df_period1)
-        period2_count = len(df_period2)
-        delta_count = period1_count - period2_count
-        st.metric(
-            label=f"{period1_label}",
-            value=f"{period1_count:,}",
-            delta=f"{delta_count:+,} vs {period2_short}",
-            delta_color="inverse",
-            help=f"Total complaints for {period1_label}"
-        )
+        with col1:
+            period1_count = len(df_period1)
+            period2_count = len(df_period2)
+            delta_count = period1_count - period2_count
+            st.metric(
+                label=f"{period1_label}",
+                value=f"{period1_count:,}",
+                delta=f"{delta_count:+,} vs {period2_short}",
+                delta_color="inverse",
+                help=f"Total complaints for {period1_label}"
+            )
 
-    with col2:
-        period2_count = len(df_period2)
-        period2_pct = (period2_count / period1_count * 100) if period1_count > 0 else 0
-        st.metric(
-            label=f"{period2_label}",
-            value=f"{period2_count:,}",
-            delta=f"{period2_pct:.1f}% of {period1_short}",
-            delta_color="off",
-            help=f"Total complaints for {period2_label}"
-        )
+        with col2:
+            period2_count = len(df_period2)
+            period2_pct = (period2_count / period1_count * 100) if period1_count > 0 else 0
+            st.metric(
+                label=f"{period2_label}",
+                value=f"{period2_count:,}",
+                delta=f"{period2_pct:.1f}% of {period1_short}",
+                delta_color="off",
+                help=f"Total complaints for {period2_label}"
+            )
 
-    with col3:
+        with col3:
+            if 'Agency' in df_period1.columns:
+                try:
+                    ntc_count = len(df_period1[df_period1['Agency'].apply(is_ntc_complaint)])
+                    ntc_pct = (ntc_count / period1_count * 100) if period1_count > 0 else 0
+                    st.metric(
+                        label="NTC Complaints",
+                        value=f"{ntc_count:,}",
+                        delta=f"{ntc_pct:.1f}% of total",
+                        delta_color="off",
+                        help="National Telecommunications Commission complaints"
+                    )
+                except Exception as e:
+                    st.metric("NTC Complaints", "Error")
+                    st.error(f"Error counting NTC complaints: {str(e)}")
+            else:
+                st.metric("NTC Complaints", "N/A")
+
+        with col4:
+            if 'Service Providers' in df_period1.columns:
+                try:
+                    # Count PEMEDES complaints (providers OR "Delivery Concerns (SP)" OR Agency="PRD")
+                    pemedes_mask = df_period1['Service Providers'].apply(is_pemedes_provider)
+                    if 'Complaint Category' in df_period1.columns:
+                        pemedes_mask = pemedes_mask | (df_period1['Complaint Category'].astype(str).str.strip().str.upper() == "DELIVERY CONCERNS (SP)")
+                    if 'Agency' in df_period1.columns:
+                        pemedes_mask = pemedes_mask | (df_period1['Agency'].astype(str).str.strip().str.upper() == "PRD")
+                    pemedes_count = len(df_period1[pemedes_mask])
+                    pemedes_pct = (pemedes_count / period1_count * 100) if period1_count > 0 else 0
+                    st.metric(
+                        label="PEMEDES Complaints",
+                        value=f"{pemedes_count:,}",
+                        delta=f"{pemedes_pct:.1f}% of total",
+                        delta_color="off",
+                        help="Complaints from PEMEDES service providers, Delivery Concerns (SP), or Agency PRD"
+                    )
+                except Exception as e:
+                    st.metric("PEMEDES Complaints", "Error")
+                    st.error(f"Error counting PEMEDES complaints: {str(e)}")
+            else:
+                st.metric("PEMEDES Complaints", "N/A")
+
+        # Overall charts - Compact design
+        chart_height = 350
+
+        # Row 1: Category and Nature
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown(f"#### Complaints by Category ({period1_label})")
+            if 'Complaint Category' in df_period1.columns:
+                valid_data = df_period1['Complaint Category'].dropna()
+                valid_data = valid_data[valid_data != '']
+                if len(valid_data) > 0:
+                    category_counts = valid_data.value_counts().head(8)
+                    fig = create_bar_chart(category_counts, "Category", 'blues', chart_height)
+                    st.plotly_chart(fig, use_container_width=True, key="overall_category")
+                else:
+                    st.info("No category data available")
+            else:
+                st.error("'Complaint Category' column not found")
+
+        with col2:
+            st.markdown(f"#### Complaints by Nature ({period1_label})")
+            if 'Complaint Nature' in df_period1.columns:
+                valid_data = df_period1['Complaint Nature'].dropna()
+                valid_data = valid_data[valid_data != '']
+                if len(valid_data) > 0:
+                    nature_counts = valid_data.value_counts().head(8)
+                    fig = create_bar_chart(nature_counts, "Nature", 'purples', chart_height)
+                    st.plotly_chart(fig, use_container_width=True, key="overall_nature")
+                else:
+                    st.info("No nature data available")
+            else:
+                st.error("'Complaint Nature' column not found")
+
+        # Monthly Trend
+        st.markdown(f"#### Monthly Complaint Trend ({period1_label})")
+        if 'Date of Complaint' in df_period1.columns:
+            valid_dates = df_period1['Date of Complaint'].dropna()
+            if len(valid_dates) > 0:
+                monthly_data = df_period1.groupby(df_period1['Date of Complaint'].dt.to_period('M')).size()
+                if len(monthly_data) > 0:
+                    df_monthly = pd.DataFrame({
+                        'Month': monthly_data.index.astype(str),
+                        'Count': monthly_data.values
+                    })
+                    fig = create_line_chart(df_monthly, 350)
+                    st.plotly_chart(fig, use_container_width=True, key="overall_monthly_trend")
+                else:
+                    st.info("No monthly data available")
+            else:
+                st.info("No valid complaint dates found")
+        else:
+            st.error("'Date of Complaint' column not found")
+
+        st.markdown("---")
+
+        # NTC Analysis
+        st.markdown("### NTC Analysis")
+
+        # Filter NTC data with error handling
         if 'Agency' in df_period1.columns:
             try:
-                ntc_count = len(df_period1[df_period1['Agency'].apply(is_ntc_complaint)])
-                ntc_pct = (ntc_count / period1_count * 100) if period1_count > 0 else 0
-                st.metric(
-                    label="NTC Complaints",
-                    value=f"{ntc_count:,}",
-                    delta=f"{ntc_pct:.1f}% of total",
-                    delta_color="off",
-                    help="National Telecommunications Commission complaints"
-                )
-            except Exception as e:
-                st.metric("NTC Complaints", "Error")
-                st.error(f"Error counting NTC complaints: {str(e)}")
-        else:
-            st.metric("NTC Complaints", "N/A")
+                # Use the is_ntc_complaint function for consistent filtering
+                df_ntc_period1 = df_period1[df_period1['Agency'].apply(is_ntc_complaint)]
+                df_ntc_period3 = df_period3[df_period3['Agency'].apply(is_ntc_complaint)]
 
-    with col4:
+                # Data integrity check
+                if len(df_ntc_period1) == 0:
+                    st.warning(f"⚠️ No NTC complaints found in {period1_label} dataset. This may indicate:")
+                    st.write("• Agency column doesn't contain 'NTC'")
+                    st.write("• No NTC-related complaints in this period")
+                    st.write("• Check the 'Agency' column format")
+            except Exception as e:
+                st.error(f"❌ Error filtering NTC data: {str(e)}")
+                st.info("Please check if the 'Agency' column contains valid text data.")
+                df_ntc_period1 = pd.DataFrame()
+                df_ntc_period3 = pd.DataFrame()
+
+            # Enhanced KPI metrics for NTC
+            kpi_col1, kpi_col2 = st.columns(2)
+            with kpi_col1:
+                ntc_period1_count = len(df_ntc_period1)
+                ntc_period1_pct = (ntc_period1_count / len(df_period1) * 100) if len(df_period1) > 0 else 0
+                st.metric(
+                    label=f"NTC ({period1_label})",
+                    value=f"{ntc_period1_count:,}",
+                    delta=f"{ntc_period1_pct:.1f}% of all complaints",
+                    delta_color="off",
+                    help=f"NTC complaints for {period1_label}"
+                )
+            with kpi_col2:
+                ntc_period3_count = len(df_ntc_period3)
+                ntc_period3_pct = (ntc_period3_count / len(df_period3) * 100) if len(df_period3) > 0 else 0
+                st.metric(
+                    label=f"NTC ({period3_label})",
+                    value=f"{ntc_period3_count:,}",
+                    delta=f"{ntc_period3_pct:.1f}% of all complaints",
+                    delta_color="off",
+                    help=f"NTC complaints for {period3_label}"
+                )
+
+            st.markdown("---")
+
+            # Use helper function for charts
+            render_comparison_charts(
+                df_ntc_period1, df_ntc_period3, 
+                period1_label, period3_label, 
+                'greens', 'teal', 
+                "ntc_providers"
+            )
+        else:
+            st.error("❌ 'Agency' column not found in data. Cannot filter NTC complaints.")
+            st.info("💡 Please ensure your data has an 'Agency' column.")
+
+        st.markdown("---")
+
+        # PEMEDES Analysis
+        st.markdown("### PEMEDES Analysis")
+
+        # Filter PEMEDES data with error handling
         if 'Service Providers' in df_period1.columns:
             try:
-                # Count PEMEDES complaints (providers OR "Delivery Concerns (SP)" OR Agency="PRD")
-                pemedes_mask = df_period1['Service Providers'].apply(is_pemedes_provider)
+                # Filter by checking if Service Provider is in PEMEDES_PROVIDERS list
+                # OR if Complaint Category is "Delivery Concerns (SP)"
+                # OR if Agency is "PRD"
+                pemedes_mask_period1 = df_period1['Service Providers'].apply(is_pemedes_provider)
                 if 'Complaint Category' in df_period1.columns:
-                    pemedes_mask = pemedes_mask | (df_period1['Complaint Category'].astype(str).str.strip().str.upper() == "DELIVERY CONCERNS (SP)")
+                    pemedes_mask_period1 = pemedes_mask_period1 | (df_period1['Complaint Category'].astype(str).str.strip().str.upper() == "DELIVERY CONCERNS (SP)")
                 if 'Agency' in df_period1.columns:
-                    pemedes_mask = pemedes_mask | (df_period1['Agency'].astype(str).str.strip().str.upper() == "PRD")
-                pemedes_count = len(df_period1[pemedes_mask])
-                pemedes_pct = (pemedes_count / period1_count * 100) if period1_count > 0 else 0
-                st.metric(
-                    label="PEMEDES Complaints",
-                    value=f"{pemedes_count:,}",
-                    delta=f"{pemedes_pct:.1f}% of total",
-                    delta_color="off",
-                    help="Complaints from PEMEDES service providers, Delivery Concerns (SP), or Agency PRD"
-                )
+                    pemedes_mask_period1 = pemedes_mask_period1 | (df_period1['Agency'].astype(str).str.strip().str.upper() == "PRD")
+                df_pemedes_period1 = df_period1[pemedes_mask_period1]
+
+                pemedes_mask_period3 = df_period3['Service Providers'].apply(is_pemedes_provider)
+                if 'Complaint Category' in df_period3.columns:
+                    pemedes_mask_period3 = pemedes_mask_period3 | (df_period3['Complaint Category'].astype(str).str.strip().str.upper() == "DELIVERY CONCERNS (SP)")
+                if 'Agency' in df_period3.columns:
+                    pemedes_mask_period3 = pemedes_mask_period3 | (df_period3['Agency'].astype(str).str.strip().str.upper() == "PRD")
+                df_pemedes_period3 = df_period3[pemedes_mask_period3]
+
+                # Data integrity check
+                if len(df_pemedes_period1) == 0:
+                    st.warning(f"⚠️ No PEMEDES complaints found in {period1_label} dataset. This may indicate:")
+                    st.write("• Service provider names don't match the PEMEDES provider list")
+                    st.write("• No PEMEDES-related complaints in this period")
+                    st.write("• Check the 'Service Providers' column format")
             except Exception as e:
-                st.metric("PEMEDES Complaints", "Error")
-                st.error(f"Error counting PEMEDES complaints: {str(e)}")
-        else:
-            st.metric("PEMEDES Complaints", "N/A")
+                st.error(f"❌ Error filtering PEMEDES data: {str(e)}")
+                st.info("Please check if the 'Service Providers' column contains valid text data.")
+                df_pemedes_period1 = pd.DataFrame()
+                df_pemedes_period3 = pd.DataFrame()
 
-    # Overall charts - Compact design
-    chart_height = 350
+            # Enhanced KPI metrics for PEMEDES
+            kpi_col1, kpi_col2 = st.columns(2)
+            with kpi_col1:
+                pemedes_period1_count = len(df_pemedes_period1)
+                pemedes_period1_pct = (pemedes_period1_count / len(df_period1) * 100) if len(df_period1) > 0 else 0
+                st.metric(
+                    label=f"PEMEDES ({period1_label})",
+                    value=f"{pemedes_period1_count:,}",
+                    delta=f"{pemedes_period1_pct:.1f}% of all complaints",
+                    delta_color="off",
+                    help=f"PEMEDES complaints for {period1_label}"
+                )
+            with kpi_col2:
+                pemedes_period3_count = len(df_pemedes_period3)
+                pemedes_period3_pct = (pemedes_period3_count / len(df_period3) * 100) if len(df_period3) > 0 else 0
+                st.metric(
+                    label=f"PEMEDES ({period3_label})",
+                    value=f"{pemedes_period3_count:,}",
+                    delta=f"{pemedes_period3_pct:.1f}% of all complaints",
+                    delta_color="off",
+                    help=f"PEMEDES complaints for {period3_label}"
+                )
 
-    # Row 1: Category and Nature
-    col1, col2 = st.columns(2)
+            st.markdown("---")
 
-    with col1:
-        st.markdown(f"#### Complaints by Category ({period1_label})")
-        if 'Complaint Category' in df_period1.columns:
-            valid_data = df_period1['Complaint Category'].dropna()
-            valid_data = valid_data[valid_data != '']
-            if len(valid_data) > 0:
-                category_counts = valid_data.value_counts().head(8)
-                fig = create_bar_chart(category_counts, "Category", 'blues', chart_height)
-                st.plotly_chart(fig, use_container_width=True, key="overall_category")
-            else:
-                st.info("No category data available")
-        else:
-            st.error("'Complaint Category' column not found")
-
-    with col2:
-        st.markdown(f"#### Complaints by Nature ({period1_label})")
-        if 'Complaint Nature' in df_period1.columns:
-            valid_data = df_period1['Complaint Nature'].dropna()
-            valid_data = valid_data[valid_data != '']
-            if len(valid_data) > 0:
-                nature_counts = valid_data.value_counts().head(8)
-                fig = create_bar_chart(nature_counts, "Nature", 'purples', chart_height)
-                st.plotly_chart(fig, use_container_width=True, key="overall_nature")
-            else:
-                st.info("No nature data available")
-        else:
-            st.error("'Complaint Nature' column not found")
-
-    # Monthly Trend
-    st.markdown(f"#### Monthly Complaint Trend ({period1_label})")
-    if 'Date of Complaint' in df_period1.columns:
-        valid_dates = df_period1['Date of Complaint'].dropna()
-        if len(valid_dates) > 0:
-            monthly_data = df_period1.groupby(df_period1['Date of Complaint'].dt.to_period('M')).size()
-            if len(monthly_data) > 0:
-                df_monthly = pd.DataFrame({
-                    'Month': monthly_data.index.astype(str),
-                    'Count': monthly_data.values
-                })
-                fig = create_line_chart(df_monthly, 350)
-                st.plotly_chart(fig, use_container_width=True, key="overall_monthly_trend")
-            else:
-                st.info("No monthly data available")
-        else:
-            st.info("No valid complaint dates found")
-    else:
-        st.error("'Date of Complaint' column not found")
-
-    st.markdown("---")
-
-    # NTC Analysis
-    st.markdown("### NTC Analysis")
-
-    # Filter NTC data with error handling
-    if 'Agency' in df_period1.columns:
-        try:
-            # Use the is_ntc_complaint function for consistent filtering
-            df_ntc_period1 = df_period1[df_period1['Agency'].apply(is_ntc_complaint)]
-            df_ntc_period3 = df_period3[df_period3['Agency'].apply(is_ntc_complaint)]
-
-            # Data integrity check
-            if len(df_ntc_period1) == 0:
-                st.warning(f"⚠️ No NTC complaints found in {period1_label} dataset. This may indicate:")
-                st.write("• Agency column doesn't contain 'NTC'")
-                st.write("• No NTC-related complaints in this period")
-                st.write("• Check the 'Agency' column format")
-        except Exception as e:
-            st.error(f"❌ Error filtering NTC data: {str(e)}")
-            st.info("Please check if the 'Agency' column contains valid text data.")
-            df_ntc_period1 = pd.DataFrame()
-            df_ntc_period3 = pd.DataFrame()
-
-        # Enhanced KPI metrics for NTC
-        kpi_col1, kpi_col2 = st.columns(2)
-        with kpi_col1:
-            ntc_period1_count = len(df_ntc_period1)
-            ntc_period1_pct = (ntc_period1_count / len(df_period1) * 100) if len(df_period1) > 0 else 0
-            st.metric(
-                label=f"NTC ({period1_label})",
-                value=f"{ntc_period1_count:,}",
-                delta=f"{ntc_period1_pct:.1f}% of all complaints",
-                delta_color="off",
-                help=f"NTC complaints for {period1_label}"
+            # Use helper function for charts
+            render_comparison_charts(
+                df_pemedes_period1, df_pemedes_period3, 
+                period1_label, period3_label, 
+                'purples', 'magenta', 
+                "pemedes_providers"
             )
-        with kpi_col2:
-            ntc_period3_count = len(df_ntc_period3)
-            ntc_period3_pct = (ntc_period3_count / len(df_period3) * 100) if len(df_period3) > 0 else 0
-            st.metric(
-                label=f"NTC ({period3_label})",
-                value=f"{ntc_period3_count:,}",
-                delta=f"{ntc_period3_pct:.1f}% of all complaints",
-                delta_color="off",
-                help=f"NTC complaints for {period3_label}"
-            )
+        else:
+            st.error("❌ 'Service Providers' column not found in data. Cannot filter PEMEDES complaints.")
+            st.info("💡 Please ensure your data has a 'Service Providers' column with PEMEDES provider names.")
 
+        # Display data processing warnings at the bottom
+        if data_warnings:
+            st.markdown("<br>", unsafe_allow_html=True)
+            for warning in data_warnings:
+                st.caption(warning)
+
+        # Data Validation & Integrity - Moved to bottom
         st.markdown("---")
+        with st.expander("📊 Data Validation & Integrity", expanded=False):
+            # Period summaries
+            col_v1, col_v2, col_v3 = st.columns(3)
 
-        col1, col2 = st.columns(2)
+            for col, df_period, label in [(col_v1, df_period1, period1_label),
+                                        (col_v2, df_period2, period2_label),
+                                        (col_v3, df_period3, period3_label)]:
+                with col:
+                    st.write(f"**{label}**")
+                    if len(df_period) > 0 and 'Date of Complaint' in df_period.columns:
+                        dates = df_period['Date of Complaint'].dropna()
+                        if len(dates) > 0:
+                            st.caption(f"{dates.min().strftime('%Y-%m-%d')} to {dates.max().strftime('%Y-%m-%d')}")
+                            st.metric("Records", f"{len(df_period):,}", label_visibility="collapsed")
 
-        with col1:
-            st.markdown(f"#### Service Providers ({period1_label})")
-            # Show date range for {period1_label}
-            if len(df_ntc_period1) > 0 and 'Date of Complaint' in df_ntc_period1.columns:
-                period1_dates = df_ntc_period1['Date of Complaint'].dropna()
-                if len(period1_dates) > 0:
-                    date_range = f"{period1_dates.min().strftime('%b %Y')} - {period1_dates.max().strftime('%b %Y')}"
-                    st.caption(f"📅 {date_range}")
+            st.markdown("---")
 
-            if 'Service Providers' in df_ntc_period1.columns and len(df_ntc_period1) > 0:
-                valid_data = df_ntc_period1['Service Providers'].dropna()
-                valid_data = valid_data[valid_data != '']
+            # Filter validation and integrity checks
+            integrity_col1, integrity_col2 = st.columns(2)
 
-                if len(valid_data) > 0:
-                    provider_counts = valid_data.value_counts().head(12)
-                    fig = create_bar_chart(provider_counts, "Service Provider", 'greens', 400)
-                    st.plotly_chart(fig, use_container_width=True, key="ntc_providers_period1")
-                else:
-                    st.info("📊 No service provider data available")
-            else:
-                fig = create_bar_chart(pd.Series(), "Service Provider", 'greens', 400)
-                st.plotly_chart(fig, use_container_width=True, key="ntc_providers_period1_empty")
-                if 'Service Providers' not in df_ntc_period1.columns:
-                    st.error("❌ 'Service Providers' column not found")
-
-        with col2:
-            st.markdown(f"#### Service Providers ({period3_label})")
-            # Show date range for {period3_label}
-            if len(df_ntc_period3) > 0 and 'Date of Complaint' in df_ntc_period3.columns:
-                period3_dates = df_ntc_period3['Date of Complaint'].dropna()
-                if len(period3_dates) > 0:
-                    date_range = f"{period3_dates.min().strftime('%b %Y')} - {period3_dates.max().strftime('%b %Y')}"
-                    st.caption(f"📅 {date_range}")
-
-            if 'Service Providers' in df_ntc_period3.columns and len(df_ntc_period3) > 0:
-                valid_data = df_ntc_period3['Service Providers'].dropna()
-                valid_data = valid_data[valid_data != '']
-
-                if len(valid_data) > 0:
-                    provider_counts = valid_data.value_counts().head(12)
-                    fig = create_bar_chart(provider_counts, "Service Provider", 'teal', 400)
-                    st.plotly_chart(fig, use_container_width=True, key="ntc_providers_period3")
-                else:
-                    st.info("📊 No service provider data available")
-            else:
-                fig = create_bar_chart(pd.Series(), "Service Provider", 'teal', 400)
-                st.plotly_chart(fig, use_container_width=True, key="ntc_providers_period3_empty")
-                if 'Service Providers' not in df_ntc_period3.columns:
-                    st.error("❌ 'Service Providers' column not found")
-    else:
-        st.error("❌ 'Agency' column not found in data. Cannot filter NTC complaints.")
-        st.info("💡 Please ensure your data has an 'Agency' column.")
-
-    st.markdown("---")
-
-    # PEMEDES Analysis
-    st.markdown("### PEMEDES Analysis")
-
-    # Filter PEMEDES data with error handling
-    if 'Service Providers' in df_period1.columns:
-        try:
-            # Filter by checking if Service Provider is in PEMEDES_PROVIDERS list
-            # OR if Complaint Category is "Delivery Concerns (SP)"
-            # OR if Agency is "PRD"
-            pemedes_mask_period1 = df_period1['Service Providers'].apply(is_pemedes_provider)
-            if 'Complaint Category' in df_period1.columns:
-                pemedes_mask_period1 = pemedes_mask_period1 | (df_period1['Complaint Category'].astype(str).str.strip().str.upper() == "DELIVERY CONCERNS (SP)")
-            if 'Agency' in df_period1.columns:
-                pemedes_mask_period1 = pemedes_mask_period1 | (df_period1['Agency'].astype(str).str.strip().str.upper() == "PRD")
-            df_pemedes_period1 = df_period1[pemedes_mask_period1]
-
-            pemedes_mask_period3 = df_period3['Service Providers'].apply(is_pemedes_provider)
-            if 'Complaint Category' in df_period3.columns:
-                pemedes_mask_period3 = pemedes_mask_period3 | (df_period3['Complaint Category'].astype(str).str.strip().str.upper() == "DELIVERY CONCERNS (SP)")
-            if 'Agency' in df_period3.columns:
-                pemedes_mask_period3 = pemedes_mask_period3 | (df_period3['Agency'].astype(str).str.strip().str.upper() == "PRD")
-            df_pemedes_period3 = df_period3[pemedes_mask_period3]
-
-            # Data integrity check
-            if len(df_pemedes_period1) == 0:
-                st.warning(f"⚠️ No PEMEDES complaints found in {period1_label} dataset. This may indicate:")
-                st.write("• Service provider names don't match the PEMEDES provider list")
-                st.write("• No PEMEDES-related complaints in this period")
-                st.write("• Check the 'Service Providers' column format")
-        except Exception as e:
-            st.error(f"❌ Error filtering PEMEDES data: {str(e)}")
-            st.info("Please check if the 'Service Providers' column contains valid text data.")
-            df_pemedes_period1 = pd.DataFrame()
-            df_pemedes_period3 = pd.DataFrame()
-
-        # Enhanced KPI metrics for PEMEDES
-        kpi_col1, kpi_col2 = st.columns(2)
-        with kpi_col1:
-            pemedes_period1_count = len(df_pemedes_period1)
-            pemedes_period1_pct = (pemedes_period1_count / len(df_period1) * 100) if len(df_period1) > 0 else 0
-            st.metric(
-                label=f"PEMEDES ({period1_label})",
-                value=f"{pemedes_period1_count:,}",
-                delta=f"{pemedes_period1_pct:.1f}% of all complaints",
-                delta_color="off",
-                help=f"PEMEDES complaints for {period1_label}"
-            )
-        with kpi_col2:
-            pemedes_period3_count = len(df_pemedes_period3)
-            pemedes_period3_pct = (pemedes_period3_count / len(df_period3) * 100) if len(df_period3) > 0 else 0
-            st.metric(
-                label=f"PEMEDES ({period3_label})",
-                value=f"{pemedes_period3_count:,}",
-                delta=f"{pemedes_period3_pct:.1f}% of all complaints",
-                delta_color="off",
-                help=f"PEMEDES complaints for {period3_label}"
-            )
-
-        st.markdown("---")
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-            st.markdown(f"#### Service Providers ({period1_label})")
-            # Show date range for {period1_label}
-            if len(df_pemedes_period1) > 0 and 'Date of Complaint' in df_pemedes_period1.columns:
-                period1_dates = df_pemedes_period1['Date of Complaint'].dropna()
-                if len(period1_dates) > 0:
-                    date_range = f"{period1_dates.min().strftime('%b %Y')} - {period1_dates.max().strftime('%b %Y')}"
-                    st.caption(f"📅 {date_range}")
-
-            if 'Service Providers' in df_pemedes_period1.columns and len(df_pemedes_period1) > 0:
-                valid_data = df_pemedes_period1['Service Providers'].dropna()
-                valid_data = valid_data[valid_data != '']
-
-                if len(valid_data) > 0:
-                    provider_counts = valid_data.value_counts().head(12)
-                    fig = create_bar_chart(provider_counts, "Service Provider", 'purples', 400)
-                    st.plotly_chart(fig, use_container_width=True, key="pemedes_providers_period1")
-                else:
-                    st.info("📊 No service provider data available")
-            else:
-                fig = create_bar_chart(pd.Series(), "Service Provider", 'purples', 400)
-                st.plotly_chart(fig, use_container_width=True, key="pemedes_providers_period1_empty")
-                if 'Service Providers' not in df_pemedes_period1.columns:
-                    st.error("❌ 'Service Providers' column not found")
-
-        with col2:
-            st.markdown(f"#### Service Providers ({period3_label})")
-            # Show date range for {period3_label}
-            if len(df_pemedes_period3) > 0 and 'Date of Complaint' in df_pemedes_period3.columns:
-                period3_dates = df_pemedes_period3['Date of Complaint'].dropna()
-                if len(period3_dates) > 0:
-                    date_range = f"{period3_dates.min().strftime('%b %Y')} - {period3_dates.max().strftime('%b %Y')}"
-                    st.caption(f"📅 {date_range}")
-
-            if 'Service Providers' in df_pemedes_period3.columns and len(df_pemedes_period3) > 0:
-                valid_data = df_pemedes_period3['Service Providers'].dropna()
-                valid_data = valid_data[valid_data != '']
-
-                if len(valid_data) > 0:
-                    provider_counts = valid_data.value_counts().head(12)
-                    fig = create_bar_chart(provider_counts, "Service Provider", 'magenta', 400)
-                    st.plotly_chart(fig, use_container_width=True, key="pemedes_providers_period3")
-                else:
-                    st.info("📊 No service provider data available")
-            else:
-                fig = create_bar_chart(pd.Series(), "Service Provider", 'magenta', 400)
-                st.plotly_chart(fig, use_container_width=True, key="pemedes_providers_period3_empty")
-                if 'Service Providers' not in df_pemedes_period3.columns:
-                    st.error("❌ 'Service Providers' column not found")
-    else:
-        st.error("❌ 'Service Providers' column not found in data. Cannot filter PEMEDES complaints.")
-        st.info("💡 Please ensure your data has a 'Service Providers' column with PEMEDES provider names.")
-
-    # Display data processing warnings at the bottom
-    if data_warnings:
-        st.markdown("<br>", unsafe_allow_html=True)
-        for warning in data_warnings:
-            st.caption(warning)
-
-    # Data Validation & Integrity - Moved to bottom
-    st.markdown("---")
-    with st.expander("📊 Data Validation & Integrity", expanded=False):
-        # Period summaries
-        col_v1, col_v2, col_v3 = st.columns(3)
-
-        for col, df_period, label in [(col_v1, df_period1, period1_label),
-                                       (col_v2, df_period2, period2_label),
-                                       (col_v3, df_period3, period3_label)]:
-            with col:
-                st.write(f"**{label}**")
-                if len(df_period) > 0 and 'Date of Complaint' in df_period.columns:
-                    dates = df_period['Date of Complaint'].dropna()
-                    if len(dates) > 0:
-                        st.caption(f"{dates.min().strftime('%Y-%m-%d')} to {dates.max().strftime('%Y-%m-%d')}")
-                        st.metric("Records", f"{len(df_period):,}", label_visibility="collapsed")
-
-        st.markdown("---")
-
-        # Filter validation and integrity checks
-        integrity_col1, integrity_col2 = st.columns(2)
-
-        with integrity_col1:
-            st.write("**Filter Validation:**")
-            if 'Agency' in df_period1.columns:
-                ntc_count = len(df_period1[df_period1['Agency'].apply(is_ntc_complaint)])
-                st.write(f"NTC: {ntc_count:,} ({(ntc_count/len(df_period1)*100):.1f}%)")
-
-            if 'Service Providers' in df_period1.columns:
-                # Use consistent PEMEDES filter
-                pemedes_mask = df_period1['Service Providers'].apply(is_pemedes_provider)
-                if 'Complaint Category' in df_period1.columns:
-                    pemedes_mask = pemedes_mask | (df_period1['Complaint Category'].astype(str).str.strip().str.upper() == "DELIVERY CONCERNS (SP)")
+            with integrity_col1:
+                st.write("**Filter Validation:**")
                 if 'Agency' in df_period1.columns:
-                    pemedes_mask = pemedes_mask | (df_period1['Agency'].astype(str).str.strip().str.upper() == "PRD")
-                pem_count = len(df_period1[pemedes_mask])
-                st.write(f"PEMEDES: {pem_count:,} ({(pem_count/len(df_period1)*100):.1f}%)")
+                    ntc_count = len(df_period1[df_period1['Agency'].apply(is_ntc_complaint)])
+                    st.write(f"NTC: {ntc_count:,} ({(ntc_count/len(df_period1)*100):.1f}%)")
 
-        with integrity_col2:
-            st.write("**Integrity Check:**")
-            # Verify Period3 ≤ Period1 (subset relationship)
-            subset_valid = len(df_period3) <= len(df_period1)
-            if subset_valid:
-                st.success(f"✓ {period3_short} ⊆ {period1_short}")
-            else:
-                st.error(f"✗ {period3_short} > {period1_short}")
+                if 'Service Providers' in df_period1.columns:
+                    # Use consistent PEMEDES filter
+                    pemedes_mask = df_period1['Service Providers'].apply(is_pemedes_provider)
+                    if 'Complaint Category' in df_period1.columns:
+                        pemedes_mask = pemedes_mask | (df_period1['Complaint Category'].astype(str).str.strip().str.upper() == "DELIVERY CONCERNS (SP)")
+                    if 'Agency' in df_period1.columns:
+                        pemedes_mask = pemedes_mask | (df_period1['Agency'].astype(str).str.strip().str.upper() == "PRD")
+                    pem_count = len(df_period1[pemedes_mask])
+                   
+                    st.write(f"PEMEDES: {pem_count:,} ({(pem_count/len(df_period1)*100):.1f}%)")
 
-            # Verify Period2 relationship
-            period2_valid = len(df_period2) <= len(df_period1)
-            if period2_valid:
-                st.success(f"✓ {period2_short} ⊆ {period1_short}")
-            else:
-                st.error(f"✗ {period2_short} > {period1_short}")
+            with integrity_col2:
+                st.write("**Integrity Check:**")
+                # Verify Period3 ≤ Period1 (subset relationship)
+                subset_valid = len(df_period3) <= len(df_period1)
+                if subset_valid:
+                    st.success(f"✓ {period3_short} ⊆ {period1_short}")
+                else:
+                    st.error(f"✗ {period3_short} > {period1_short}")
 
-    # Footer
-    st.markdown("---")
-    st.markdown(f"*Dashboard last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*")
+                # Verify Period2 relationship
+                period2_valid = len(df_period2) <= len(df_period1)
+                if period2_valid:
+                    st.success(f"✓ {period2_short} ⊆ {period1_short}")
+                else:
+                    st.error(f"✗ {period2_short} > {period1_short}")
 
-    # Auto-refresh mechanism - Simple and robust using meta refresh
-    if st.session_state.auto_refresh:
-        st.markdown(
-            f'<meta http-equiv="refresh" content="{st.session_state.refresh_interval}">',
-            unsafe_allow_html=True
-        )
+        # Footer
+        st.markdown("---")
+        st.markdown(f"*Dashboard last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*")
+
+    # Call the fragment with the initial dataframe (if any)
+    render_dashboard_content(df)
 
 if __name__ == "__main__":
     main()
