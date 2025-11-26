@@ -153,6 +153,61 @@ PEMEDES_PROVIDERS = [
     "SPX",
 ]
 
+# Mapping for normalizing service provider names to handle duplicates
+PROVIDER_ALIASES = {
+    # SPX
+    'spx': 'SPX',
+    'spx express': 'SPX',
+    'spx philippines': 'SPX',
+    'spx philippines, inc.': 'SPX',
+    'shopee express': 'SPX',
+    
+    # J&T
+    'j&t': 'J&T',
+    'j&t express': 'J&T',
+    'j & t': 'J&T',
+    'j & t express': 'J&T',
+    'ph global jet express': 'J&T',
+    'ph gobal jet express, inc. d.b.a. j&t express': 'J&T',
+    
+    # LBC
+    'lbc': 'LBC',
+    'lbc express': 'LBC',
+    'lbc express corporation': 'LBC',
+    
+    # 2GO
+    '2go': '2GO',
+    '2go express': '2GO',
+    '2go express, inc.': '2GO',
+    
+    # Flash
+    'flash': 'Flash Express',
+    'flash express': 'Flash Express',
+    'flash express (ph) co. ltd., inc.': 'Flash Express',
+    
+    # Ninja Van
+    'ninja van': 'Ninja Van',
+    'ninjavan': 'Ninja Van',
+    'wall street courier services, inc. d.b.a. ninja van': 'Ninja Van',
+    
+    # Grab
+    'grab': 'Grab Express',
+    'grab express': 'Grab Express',
+    'grabexpress': 'Grab Express',
+    'grabexpress, inc.': 'Grab Express',
+    
+    # Air21
+    'air21': 'Air21',
+    'air 21': 'Air21',
+    'airfreight 2100, inc. d.b.a. air21': 'Air21',
+    
+    # GoGo Xpress
+    'gogo xpress': 'GoGo Xpress',
+    'gogoxpress': 'GoGo Xpress',
+    'quadx': 'GoGo Xpress',
+    'quadx, inc. d.b.a. gogo xpress': 'GoGo Xpress',
+}
+
 # Page configuration
 st.set_page_config(
     page_title="Complaint Analysis Dashboard - Real-time",
@@ -683,6 +738,18 @@ def prepare_data(df):
             df[col] = df[col].astype(str).str.strip()
             df[col] = df[col].replace(['nan', 'None', '', 'NaN', 'NaT'], np.nan)
 
+    # Normalize Service Providers to handle duplicates/variations
+    if 'Service Providers' in df.columns:
+        # Helper function to normalize provider names
+        def normalize_provider(name):
+            if pd.isna(name) or name == '':
+                return name
+            name_str = str(name).strip()
+            name_lower = name_str.lower()
+            return PROVIDER_ALIASES.get(name_lower, name_str)
+
+        df['Service Providers'] = df['Service Providers'].apply(normalize_provider)
+
     # Remove rows where Date of Complaint is invalid
     if 'Date of Complaint' in df.columns:
         rows_before = len(df)
@@ -735,7 +802,7 @@ def filter_by_date(df, start_month, start_year=None):
         st.error(f"Error filtering by date: {str(e)}")
         return df
 
-def create_bar_chart(data_series, title, color_scale='blues', height=400):
+def create_bar_chart(data_series, title, color_scale='blues', height=500):
     """Create a modern bar chart with enhanced styling"""
     if data_series is None or len(data_series) == 0:
         # Return empty figure with message
@@ -808,7 +875,7 @@ def create_bar_chart(data_series, title, color_scale='blues', height=400):
     )
     return fig
 
-def create_pie_chart(data_series, title, color_scheme=None, height=400):
+def create_pie_chart(data_series, title, color_scheme=None, height=500):
     """Create a modern donut chart with enhanced styling"""
     if data_series is None or len(data_series) == 0:
         # Return empty figure with message
@@ -871,7 +938,7 @@ def create_pie_chart(data_series, title, color_scheme=None, height=400):
     )
     return fig
 
-def create_line_chart(df_monthly, height=400):
+def create_line_chart(df_monthly, height=500):
     """Create a modern line chart with enhanced styling"""
     fig = px.line(
         df_monthly,
@@ -1295,7 +1362,7 @@ def main():
             st.metric("PEMEDES Complaints", "N/A")
 
     # Overall charts - Compact design
-    chart_height = 280
+    chart_height = 350
 
     # Row 1: Category and Nature
     col1, col2 = st.columns(2)
@@ -1339,7 +1406,7 @@ def main():
                     'Month': monthly_data.index.astype(str),
                     'Count': monthly_data.values
                 })
-                fig = create_line_chart(df_monthly, 250)
+                fig = create_line_chart(df_monthly, 350)
                 st.plotly_chart(fig, use_container_width=True, key="overall_monthly_trend")
             else:
                 st.info("No monthly data available")
@@ -1414,12 +1481,12 @@ def main():
 
                 if len(valid_data) > 0:
                     provider_counts = valid_data.value_counts().head(12)
-                    fig = create_bar_chart(provider_counts, "Service Provider", 'greens', 320)
+                    fig = create_bar_chart(provider_counts, "Service Provider", 'greens', 400)
                     st.plotly_chart(fig, use_container_width=True, key="ntc_providers_period1")
                 else:
                     st.info("📊 No service provider data available")
             else:
-                fig = create_bar_chart(pd.Series(), "Service Provider", 'greens', 320)
+                fig = create_bar_chart(pd.Series(), "Service Provider", 'greens', 400)
                 st.plotly_chart(fig, use_container_width=True, key="ntc_providers_period1_empty")
                 if 'Service Providers' not in df_ntc_period1.columns:
                     st.error("❌ 'Service Providers' column not found")
@@ -1439,12 +1506,12 @@ def main():
 
                 if len(valid_data) > 0:
                     provider_counts = valid_data.value_counts().head(12)
-                    fig = create_bar_chart(provider_counts, "Service Provider", 'teal', 320)
+                    fig = create_bar_chart(provider_counts, "Service Provider", 'teal', 400)
                     st.plotly_chart(fig, use_container_width=True, key="ntc_providers_period3")
                 else:
                     st.info("📊 No service provider data available")
             else:
-                fig = create_bar_chart(pd.Series(), "Service Provider", 'teal', 320)
+                fig = create_bar_chart(pd.Series(), "Service Provider", 'teal', 400)
                 st.plotly_chart(fig, use_container_width=True, key="ntc_providers_period3_empty")
                 if 'Service Providers' not in df_ntc_period3.columns:
                     st.error("❌ 'Service Providers' column not found")
@@ -1531,12 +1598,12 @@ def main():
 
                 if len(valid_data) > 0:
                     provider_counts = valid_data.value_counts().head(12)
-                    fig = create_bar_chart(provider_counts, "Service Provider", 'purples', 320)
+                    fig = create_bar_chart(provider_counts, "Service Provider", 'purples', 400)
                     st.plotly_chart(fig, use_container_width=True, key="pemedes_providers_period1")
                 else:
                     st.info("📊 No service provider data available")
             else:
-                fig = create_bar_chart(pd.Series(), "Service Provider", 'purples', 320)
+                fig = create_bar_chart(pd.Series(), "Service Provider", 'purples', 400)
                 st.plotly_chart(fig, use_container_width=True, key="pemedes_providers_period1_empty")
                 if 'Service Providers' not in df_pemedes_period1.columns:
                     st.error("❌ 'Service Providers' column not found")
@@ -1556,12 +1623,12 @@ def main():
 
                 if len(valid_data) > 0:
                     provider_counts = valid_data.value_counts().head(12)
-                    fig = create_bar_chart(provider_counts, "Service Provider", 'magenta', 320)
+                    fig = create_bar_chart(provider_counts, "Service Provider", 'magenta', 400)
                     st.plotly_chart(fig, use_container_width=True, key="pemedes_providers_period3")
                 else:
                     st.info("📊 No service provider data available")
             else:
-                fig = create_bar_chart(pd.Series(), "Service Provider", 'magenta', 320)
+                fig = create_bar_chart(pd.Series(), "Service Provider", 'magenta', 400)
                 st.plotly_chart(fig, use_container_width=True, key="pemedes_providers_period3_empty")
                 if 'Service Providers' not in df_pemedes_period3.columns:
                     st.error("❌ 'Service Providers' column not found")
