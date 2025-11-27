@@ -11,6 +11,7 @@ import numpy as np
 import re
 from dateutil import parser as date_parser
 import os
+import ai_reports  # Import the new AI module
 
 # Column mapping
 COLUMN_LABELS = {
@@ -484,7 +485,7 @@ def extract_spreadsheet_id(url):
 
     return None
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=60, show_spinner=False)
 def load_data_from_public_gsheet(spreadsheet_url, timestamp):
     """Load data from public Google Sheets without authentication"""
     try:
@@ -523,7 +524,7 @@ def load_data_from_public_gsheet(spreadsheet_url, timestamp):
         st.error(f"❌ Error loading public sheet: {str(e)}")
         return None
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=60, show_spinner=False)
 def load_data_from_gsheet_with_auth(credentials_dict, spreadsheet_url, timestamp):
     """Load data from Google Sheets with service account authentication"""
     try:
@@ -1096,19 +1097,22 @@ def main():
     # Apply custom CSS styles
     st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
-    # Load default Google Sheets URL from secrets (secure)
-    # SECURITY: URL is stored in .streamlit/secrets.toml and not exposed in code
-    # Use the provided default Google Sheet URL as the app default (always)
-    DEFAULT_GSHEET_URL = "https://docs.google.com/spreadsheets/d/1JDd0-4JffW5PB34XKDWaKDfPM-jQ22z1VXeCX1WpKGw/edit?usp=sharing"
-    DEFAULT_SHEET_AVAILABLE = True
+    # Load default Google Sheets URL from environment variables or secrets (secure)
+    # SECURITY: URL should be stored in environment variables or .streamlit/secrets.toml
+    DEFAULT_GSHEET_URL = os.getenv("DEFAULT_GSHEET_URL", "")
+    DEFAULT_SHEET_AVAILABLE = bool(DEFAULT_GSHEET_URL)
 
-    # Prefill session state with default (always show this URL by default)
-    if 'gsheet_url' in st.session_state:
-        st.session_state.gsheet_url = DEFAULT_GSHEET_URL
+    # Prefill session state with default if available
+    if 'gsheet_url' in st.session_state and DEFAULT_SHEET_AVAILABLE:
+        if not st.session_state.gsheet_url:  # Only set if empty
+            st.session_state.gsheet_url = DEFAULT_GSHEET_URL
     
     # Dashboard header
     st.markdown('<h1 style="font-size: 2rem; font-weight: 700; margin-bottom: 0.75rem;">📊 Complaint Analysis Dashboard</h1>', unsafe_allow_html=True)
     
+    # Navigation Tabs
+    tab_dashboard, tab_ai_report = st.tabs(["📈 Dashboard", "🤖 AI Action Plan"])
+
     # Sidebar for data loading and settings
     with st.sidebar:
         st.markdown("### ⚙️ Settings")
@@ -1669,8 +1673,19 @@ def main():
         st.markdown("---")
         st.markdown(f"*Dashboard last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*")
 
-    # Call the fragment with the initial dataframe (if any)
-    render_dashboard_content(df)
+    # Prepare data for both tabs if available
+    df_prepared = None
+    if df is not None and not df.empty:
+        df_prepared, _ = prepare_data(df)
+
+    # Render Dashboard Tab
+    with tab_dashboard:
+        render_dashboard_content(df)
+
+    # Render AI Action Plan Tab
+    with tab_ai_report:
+        # Pass the prepared dataframe to the AI report module
+        ai_reports.render_weekly_report(df_prepared)
 
 if __name__ == "__main__":
     main()
