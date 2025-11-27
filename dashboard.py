@@ -1097,9 +1097,20 @@ def main():
     # Apply custom CSS styles
     st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
-    # Load default Google Sheets URL from environment variables or secrets (secure)
-    # SECURITY: URL should be stored in environment variables or .streamlit/secrets.toml
-    DEFAULT_GSHEET_URL = os.getenv("DEFAULT_GSHEET_URL", "")
+    # Load default Google Sheets URL from Streamlit secrets or environment variables
+    # SECURITY: URL should be stored in .streamlit/secrets.toml (for deployments) or .env (for local)
+    DEFAULT_GSHEET_URL = ""
+    try:
+        # Try Streamlit secrets first (for deployed apps)
+        if hasattr(st, 'secrets') and 'DEFAULT_GSHEET_URL' in st.secrets:
+            DEFAULT_GSHEET_URL = st.secrets["DEFAULT_GSHEET_URL"]
+    except:
+        pass
+
+    # Fall back to environment variable (for local development)
+    if not DEFAULT_GSHEET_URL:
+        DEFAULT_GSHEET_URL = os.getenv("DEFAULT_GSHEET_URL", "")
+
     DEFAULT_SHEET_AVAILABLE = bool(DEFAULT_GSHEET_URL)
 
     # Prefill session state with default URL on first load
