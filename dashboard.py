@@ -1102,9 +1102,9 @@ def main():
     DEFAULT_GSHEET_URL = os.getenv("DEFAULT_GSHEET_URL", "")
     DEFAULT_SHEET_AVAILABLE = bool(DEFAULT_GSHEET_URL)
 
-    # Prefill session state with default if available
-    if 'gsheet_url' in st.session_state and DEFAULT_SHEET_AVAILABLE:
-        if not st.session_state.gsheet_url:  # Only set if empty
+    # Prefill session state with default URL on first load
+    if DEFAULT_SHEET_AVAILABLE:
+        if 'gsheet_url' not in st.session_state or not st.session_state.gsheet_url:
             st.session_state.gsheet_url = DEFAULT_GSHEET_URL
     
     # Dashboard header
@@ -1129,18 +1129,23 @@ def main():
         df = None
         
         if data_source == "Google Sheets (Public)":
+            # Use default URL if available, but don't display it in the input field
             spreadsheet_url = st.text_input(
-                "Sheet URL", 
-                value=st.session_state.gsheet_url or "",
+                "Sheet URL",
+                value="",  # Always show blank input field
                 placeholder="Paste 'Anyone with the link' URL here...",
                 label_visibility="collapsed"
             )
-            
-            if spreadsheet_url:
-                st.session_state.gsheet_url = spreadsheet_url
+
+            # Use user input if provided, otherwise use default from env
+            active_url = spreadsheet_url if spreadsheet_url else st.session_state.gsheet_url
+
+            if active_url:
+                if spreadsheet_url:  # Only update session state if user provides URL
+                    st.session_state.gsheet_url = spreadsheet_url
                 interval = st.session_state.refresh_interval if st.session_state.auto_refresh else 60
                 current_time = int(datetime.now().timestamp() // interval) * interval
-                df = load_data_from_public_gsheet(spreadsheet_url, current_time)
+                df = load_data_from_public_gsheet(active_url, current_time)
                 st.session_state.data_source_type = "gsheets_public"
         
         elif data_source == "Upload Excel":
@@ -1168,20 +1173,24 @@ def main():
                     st.session_state.gsheet_creds = None
                     st.rerun()
             
+            # Use default URL if available, but don't display it in the input field
             spreadsheet_url = st.text_input(
-                "Sheet URL", 
-                value=st.session_state.gsheet_url or "",
+                "Sheet URL",
+                value="",  # Always show blank input field
                 placeholder="Paste Sheet URL here...",
                 label_visibility="collapsed"
             )
-            
+
+            # Use user input if provided, otherwise use default from env
             if spreadsheet_url:
                 st.session_state.gsheet_url = spreadsheet_url
-            
-            if st.session_state.gsheet_creds and st.session_state.gsheet_url:
+
+            active_url = st.session_state.gsheet_url
+
+            if st.session_state.gsheet_creds and active_url:
                 interval = st.session_state.refresh_interval if st.session_state.auto_refresh else 60
                 current_time = int(datetime.now().timestamp() // interval) * interval
-                df = load_data_from_gsheet_with_auth(st.session_state.gsheet_creds, st.session_state.gsheet_url, current_time)
+                df = load_data_from_gsheet_with_auth(st.session_state.gsheet_creds, active_url, current_time)
                 st.session_state.data_source_type = "gsheets_private"
         
         if df is not None and not df.empty:
