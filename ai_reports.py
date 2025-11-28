@@ -243,25 +243,31 @@ AI_REPORT_CSS = """
 
 /* Column Widths */
 .col-issue {
-    width: 22%;
-    min-width: 160px;
+    width: 25%;
+    min-width: 180px;
     font-weight: 600;
     color: #1f2937;
 }
 
 .col-action {
-    width: 38%;
-    min-width: 280px;
+    width: 35%;
+    min-width: 260px;
 }
 
 .col-unit {
-    width: 18%;
-    min-width: 140px;
+    width: 15%;
+    min-width: 120px;
 }
 
 .col-remarks {
-    width: 22%;
-    min-width: 160px;
+    width: 15%;
+    min-width: 120px;
+}
+
+.col-resolution {
+    width: 10%;
+    min-width: 100px;
+    text-align: center;
 }
 
 /* Mobile Responsiveness */
@@ -348,6 +354,10 @@ def categorize_issue_to_unit(issue_name, issue_type="Category"):
     Returns:
         Tuple of (unit_code, unit_full_name, organization_type)
     """
+    # Validate input
+    if issue_name is None or issue_name == '':
+        return "CICC", "Cybersecurity Investigation and Coordinating Center", "Attached Agency"
+
     issue_lower = str(issue_name).lower()
 
     # Score each unit based on keyword matches
@@ -401,6 +411,10 @@ def categorize_issue_to_unit(issue_name, issue_type="Category"):
 def init_vertex_ai():
     """Initialize Vertex AI with error handling"""
     try:
+        # Check if vertexai is properly imported
+        if not hasattr(vertexai, 'init'):
+            return False, "Vertex AI module not properly loaded. Please check your installation."
+
         credentials, project_id = google.auth.default()
 
         if not project_id:
@@ -408,6 +422,8 @@ def init_vertex_ai():
 
         vertexai.init(project=project_id, location="asia-southeast1")
         return True, None
+    except ImportError as e:
+        return False, f"Import error: {str(e)}. Please install required packages: pip install google-cloud-aiplatform"
     except Exception as e:
         return False, str(e)
 
@@ -423,7 +439,11 @@ def get_service_provider_breakdown(df, issue_name, issue_type):
     Returns:
         List of dicts with service provider counts and percentages
     """
-    if df is None or df.empty or 'Service Providers' not in df.columns:
+    # Enhanced validation
+    if df is None or df.empty:
+        return []
+
+    if 'Service Providers' not in df.columns:
         return []
 
     # Filter dataframe to only complaints matching this issue
@@ -432,14 +452,18 @@ def get_service_provider_breakdown(df, issue_name, issue_type):
     if column_name not in df.columns:
         return []
 
-    # Get complaints for this specific issue
-    issue_complaints = df[df[column_name] == issue_name]
+    try:
+        # Get complaints for this specific issue with safe filtering
+        issue_complaints = df[df[column_name] == issue_name]
 
-    if len(issue_complaints) == 0:
+        if len(issue_complaints) == 0:
+            return []
+
+        # Get service provider counts
+        sp_counts = issue_complaints['Service Providers'].dropna().value_counts()
+    except Exception as e:
+        # Silently handle any filtering errors
         return []
-
-    # Get service provider counts
-    sp_counts = issue_complaints['Service Providers'].dropna().value_counts()
 
     if len(sp_counts) == 0:
         return []
@@ -457,10 +481,10 @@ def get_service_provider_breakdown(df, issue_name, issue_type):
                 "percentage": round(percentage, 1)
             })
 
-    # Sort by count descending
+    # Sort by count descending and limit to top 5
     breakdown.sort(key=lambda x: x['count'], reverse=True)
 
-    return breakdown
+    return breakdown[:5]  # Return only top 5 service providers
 
 def get_top_issues(df):
     """Extract top 5 issues based on Category and Nature
@@ -473,35 +497,39 @@ def get_top_issues(df):
 
     issues = []
 
-    # Analyze Categories (matching dashboard's approach)
-    if 'Complaint Category' in df.columns:
-        # Filter out NaN and empty values, matching dashboard behavior
-        valid_categories = df['Complaint Category'].dropna()
-        valid_categories = valid_categories[valid_categories != '']
+    try:
+        # Analyze Categories (matching dashboard's approach)
+        if 'Complaint Category' in df.columns:
+            # Filter out NaN and empty values, matching dashboard behavior
+            valid_categories = df['Complaint Category'].dropna()
+            valid_categories = valid_categories[valid_categories != '']
 
-        if len(valid_categories) > 0:
-            top_cats = valid_categories.value_counts().head(5)
-            for cat, count in top_cats.items():
-                issues.append({
-                    "type": "Category",
-                    "name": str(cat),  # Ensure string type
-                    "count": int(count)
-                })
+            if len(valid_categories) > 0:
+                top_cats = valid_categories.value_counts().head(5)
+                for cat, count in top_cats.items():
+                    issues.append({
+                        "type": "Category",
+                        "name": str(cat),  # Ensure string type
+                        "count": int(count)
+                    })
 
-    # If we don't have enough categories, look at Nature
-    if len(issues) < 5 and 'Complaint Nature' in df.columns:
-        # Filter out NaN and empty values
-        valid_nature = df['Complaint Nature'].dropna()
-        valid_nature = valid_nature[valid_nature != '']
+        # If we don't have enough categories, look at Nature
+        if len(issues) < 5 and 'Complaint Nature' in df.columns:
+            # Filter out NaN and empty values
+            valid_nature = df['Complaint Nature'].dropna()
+            valid_nature = valid_nature[valid_nature != '']
 
-        if len(valid_nature) > 0:
-            top_nature = valid_nature.value_counts().head(5 - len(issues))
-            for nat, count in top_nature.items():
-                issues.append({
-                    "type": "Nature",
-                    "name": str(nat),  # Ensure string type
-                    "count": int(count)
-                })
+            if len(valid_nature) > 0:
+                top_nature = valid_nature.value_counts().head(5 - len(issues))
+                for nat, count in top_nature.items():
+                    issues.append({
+                        "type": "Nature",
+                        "name": str(nat),  # Ensure string type
+                        "count": int(count)
+                    })
+    except Exception as e:
+        # Return empty list if any error occurs during analysis
+        return []
 
     return issues[:5]
 
@@ -516,63 +544,96 @@ def generate_ai_action_plan(issues, df=None):
         issues: List of top issues
         df: Optional dataframe for service provider analysis
     """
-    if not issues:
+    if not issues or len(issues) == 0:
         return []
 
-    # First, categorize each issue to get recommended units and SP breakdown
-    enriched_issues = []
-    for issue in issues:
-        unit_code, unit_name, org_type = categorize_issue_to_unit(issue['name'], issue['type'])
+    # Validate that issues have required fields
+    try:
+        # First, categorize each issue to get recommended units and SP breakdown
+        enriched_issues = []
+        for issue in issues:
+            if not isinstance(issue, dict) or 'name' not in issue or 'type' not in issue:
+                continue  # Skip invalid issue entries
 
-        # Get top service provider if applicable
-        top_sp = None
-        sp_count = 0
-        sp_percentage = 0
-        if df is not None and unit_code in UNITS_REQUIRING_SP_BREAKDOWN:
-            sp_breakdown = get_service_provider_breakdown(df, issue['name'], issue['type'])
-            if sp_breakdown and len(sp_breakdown) > 0:
-                top_sp = sp_breakdown[0]['provider']
-                sp_count = sp_breakdown[0]['count']
-                sp_percentage = sp_breakdown[0]['percentage']
+            unit_code, unit_name, org_type = categorize_issue_to_unit(issue['name'], issue['type'])
 
-        enriched_issues.append({
-            **issue,
-            "recommended_unit": unit_code,
-            "recommended_unit_full": unit_name,
-            "org_type": org_type,
-            "top_service_provider": top_sp,
-            "top_sp_count": sp_count,
-            "top_sp_percentage": sp_percentage
-        })
+            # Get top service provider if applicable
+            top_sp = None
+            sp_count = 0
+            sp_percentage = 0
+            if df is not None and unit_code in UNITS_REQUIRING_SP_BREAKDOWN:
+                sp_breakdown = get_service_provider_breakdown(df, issue['name'], issue['type'])
+                if sp_breakdown and len(sp_breakdown) > 0:
+                    top_sp = sp_breakdown[0]['provider']
+                    sp_count = sp_breakdown[0]['count']
+                    sp_percentage = sp_breakdown[0]['percentage']
+
+            enriched_issues.append({
+                **issue,
+                "recommended_unit": unit_code,
+                "recommended_unit_full": unit_name,
+                "org_type": org_type,
+                "top_service_provider": top_sp,
+                "top_sp_count": sp_count,
+                "top_sp_percentage": sp_percentage
+            })
+
+        # If no valid issues were enriched, return empty
+        if len(enriched_issues) == 0:
+            return []
+
+    except Exception as e:
+        # If enrichment fails, return empty list
+        return []
 
     try:
         llm_model = os.getenv("LLM_MODEL", "gemini-1.5-flash-001")
         model = GenerativeModel(llm_model)
 
-        system_prompt = os.getenv("SYSTEM_PROMPT", "You are a strategic analyst for the Department of Information and Communications Technology (DICT). Analyze the following top complaint issues and propose a concrete action plan for each.")
+        system_prompt = os.getenv("SYSTEM_PROMPT", "You are a strategic analyst for the Department of Information and Communications Technology (DICT). Your role is to create actionable, specific, and measurable intervention plans to resolve citizen complaints.")
 
-        # Build comprehensive unit guidelines
+        # Build comprehensive unit guidelines with action plan templates
         unit_guidelines = """
-DICT ORGANIZATIONAL STRUCTURE - UNIT ASSIGNMENT GUIDE:
+DICT ORGANIZATIONAL STRUCTURE - UNIT ASSIGNMENT GUIDE WITH ACTION PLAN TEMPLATES:
 
 1. DELIVERY UNITS (DICT Internal Services):
    - GDTB (Government Digital Transformation Bureau): eGov services, PBH, government digital transformation
+     Template: "Conduct system audit of [specific service], implement fixes for [issue], and enhance user experience through [specific improvement]"
+
    - FPIAP (Free Public Internet Access Program): Free Wi-Fi, public internet access
+     Template: "Deploy technical team to [location/issue area], restore/upgrade connectivity, and establish monitoring protocol"
+
    - ILCDB (ICT Literacy and Competency Development Bureau): Training, upskilling, certifications, courses
+     Template: "Review [specific program], address [issue], streamline [process], and communicate timeline to affected participants"
+
    - AS (Administrative Service): HR concerns, personnel, recruitment
+     Template: "Investigate [HR issue], implement corrective measures, and update policy/procedure to prevent recurrence"
+
    - IMB (Infrastructure Management Bureau): Cloud hosting, web hosting, government online services, data centers
+     Template: "Conduct infrastructure assessment, resolve [technical issue], and implement redundancy/backup measures"
+
    - CSB (Cybersecurity Bureau): Digital certificates, PKI, encryption
-   - PRD (Procurement and Records Division): Delivery concerns, courier/logistics (LBC, Ninja Van, J&T, etc.)
+     Template: "Fast-track certificate issuance/renewal process, resolve [specific issue], and establish expedited processing for backlog"
+
+   - PRD (Procurement and Records Division): Delivery concerns, courier/logistics
+     Template: "Escalate to [Top Service Provider] management, demand improved SLA compliance, establish penalty mechanism for delays, and explore alternative couriers"
+
    - ROCS (Regional Operations): Regional office concerns
+     Template: "Coordinate with [specific region], deploy support team, resolve [issue], and strengthen regional coordination protocols"
 
 2. ATTACHED AGENCIES (Under DICT supervision):
-   - NTC (National Telecommunications Commission): Internet/telco issues, disconnections, slow connection,
-     technical service, unsolicited SMS, telecom billing, refunds (PLDT, Globe, Smart, Converge, DITO, etc.)
+   - NTC (National Telecommunications Commission): Internet/telco issues, disconnections, slow connection, technical service
+     Template: "Issue compliance directive to [Top Service Provider], mandate service restoration within [timeframe], impose penalties for SLA violations, and monitor resolution progress"
+
    - CICC (Cybersecurity Investigation and Coordinating Center): Cybercrime, hacking, phishing, scams, fraud
+     Template: "Initiate investigation of [scam/fraud type], coordinate with law enforcement, issue public advisory, and pursue legal action against perpetrators"
 
 3. OTHER AGENCIES (External partners):
    - SEC (Securities and Exchange Commission): Harassment, online lending, loan app collections
-   - DTI (Department of Trade and Industry): E-commerce, consumer protection, retail refunds, online shopping
+     Template: "Coordinate referral to SEC, provide complainant documentation support, and follow up on SEC enforcement action"
+
+   - DTI (Department of Trade and Industry): E-commerce, consumer protection, retail refunds
+     Template: "Refer to DTI Consumer Protection, facilitate mediation between parties, and support complaint resolution"
 """
 
         prompt = f"""
@@ -583,33 +644,41 @@ DICT ORGANIZATIONAL STRUCTURE - UNIT ASSIGNMENT GUIDE:
         Top Complaint Issues (pre-categorized with recommendations and service provider analysis):
         {json.dumps(enriched_issues, indent=2)}
 
-        For each issue, provide:
-        1. A specific, actionable ACTION PLAN (1-2 sentences) that addresses the root cause
-        2. The UNIT/AGENCY code from the recommendations provided (use the "recommended_unit" field)
-        3. Brief REMARKS explaining why this is a priority, including:
-           - Total complaint volume
-           - Top service provider if available (from "top_service_provider" field)
-           - Impact and urgency
+        YOUR TASK: Create specific, actionable intervention plans for each issue.
+
+        REQUIREMENTS FOR EACH ACTION PLAN:
+        1. IDENTIFY ROOT CAUSE: What is the underlying problem causing this complaint?
+        2. SPECIFIC ACTIONS: What concrete steps must be taken? (use the templates above as guides)
+        3. TARGET SERVICE PROVIDER: If "top_service_provider" exists, name them specifically in the action plan
+        4. MEASURABLE OUTCOME: What is the expected result?
+        5. ACCOUNTABILITY: Who coordinates/implements? (use "recommended_unit" field)
+
+        EXAMPLES OF GOOD ACTION PLANS:
+
+        For NTC + Internet Issues + Top Provider "PLDT":
+        "Issue compliance directive to PLDT requiring restoration of service within 48 hours for affected subscribers, impose administrative penalties for repeated SLA violations, establish weekly monitoring of complaint trends, and mandate quarterly service improvement reports."
+
+        For PRD + Delivery Concerns + Top Provider "J&T Express":
+        "Escalate to J&T Express regional management demanding immediate improvement in delivery timeframes, implement penalty mechanism for delays exceeding 5 days, require daily tracking updates for DICT shipments, and identify backup courier services to diversify risk."
+
+        For NTC + Unsolicited SMS:
+        "Direct all telecommunications providers to strengthen spam filtering mechanisms, issue show-cause orders to identified spam sources, coordinate with NBI Cybercrime Division for prosecution, and launch public awareness campaign on spam reporting procedures."
+
+        For DTI + E-commerce refund issues:
+        "Refer to DTI Consumer Protection Group, facilitate mediation between complainant and merchant, provide documentation support for filing formal complaints, and coordinate follow-up on resolution timeline."
 
         CRITICAL RULES:
-        - ALWAYS use the "recommended_unit" provided for each issue - this has been pre-validated
-        - If "top_service_provider" is provided, MENTION it in the remarks to identify the main culprit
-        - Be specific about coordination mechanisms and deliverables
-        - Reference both total complaints and top provider complaints in remarks
-        - Align action plans with the unit's mandate shown in the guide above
+        - DO NOT use generic language like "coordinate with" or "address concerns"
+        - DO use specific verbs: "Issue directive", "Escalate to", "Implement", "Mandate", "Conduct audit", "Deploy team"
+        - ALWAYS mention the top service provider by name if provided in the data
+        - Include specific mechanisms (penalties, timelines, monitoring, reporting)
+        - Use professional government language suitable for executive review
+        - ALWAYS use the "recommended_unit" from the enriched_issues data
+        - Keep action plans to 2-3 sentences maximum
+        - Remarks field must be an empty string ""
 
         Return ONLY a valid JSON array with keys: "issue", "action_plan", "unit", "remarks".
         Do not include markdown formatting like ```json.
-
-        Example format (use ACTUAL data from the enriched_issues provided):
-        [
-            {{
-                "issue": "{{issue_name}}",
-                "action_plan": "{{specific_actionable_plan_based_on_unit_mandate}}",
-                "unit": "{{recommended_unit}}",
-                "remarks": "{{priority_level}} with {{count}} complaints. {{If top_service_provider exists: Top provider: {{top_service_provider}} ({{top_sp_count}} complaints, {{top_sp_percentage}}%).}} {{Impact_statement}}."
-            }}
-        ]
         """
 
         response = model.generate_content(prompt)
@@ -637,26 +706,59 @@ DICT ORGANIZATIONAL STRUCTURE - UNIT ASSIGNMENT GUIDE:
 
     except Exception as e:
         st.error(f"AI Generation Error: {str(e)}")
-        # Fallback: use pre-categorized units with SP details
+        # Fallback: use pre-categorized units with specific action plans based on unit type and service provider
         fallback_plans = []
         for issue in enriched_issues:
-            # Build remarks with SP info if available
-            remarks = f"Priority issue with {issue['count']} complaints."
-            if issue.get('top_service_provider'):
-                remarks += f" Top provider: {issue['top_service_provider']} ({issue['top_sp_count']} complaints, {issue['top_sp_percentage']}%)."
-            remarks += f" Categorized as {issue['org_type']}. Requires immediate action and monitoring."
+            unit_code = issue['recommended_unit']
+            unit_name = DICT_UNIT_MAPPING[unit_code]['name']
+            top_sp = issue.get('top_service_provider')
 
-            # Build action plan with SP focus if applicable
-            action_plan = f"Coordinate with {DICT_UNIT_MAPPING[issue['recommended_unit']]['name']} to investigate and resolve this complaint category"
-            if issue.get('top_service_provider'):
-                action_plan += f", with priority focus on {issue['top_service_provider']}"
-            action_plan += " through targeted interventions and stakeholder engagement."
+            # Build specific action plans based on unit type
+            if unit_code == "NTC":
+                if top_sp:
+                    action_plan = f"Issue compliance directive to {top_sp} requiring immediate service improvement, impose penalties for SLA violations, and establish monitoring mechanism for complaint resolution."
+                else:
+                    action_plan = f"Conduct investigation of telecommunications service quality issues, issue compliance directives to non-compliant providers, and enforce regulatory penalties where applicable."
+
+            elif unit_code == "PRD":
+                if top_sp:
+                    action_plan = f"Escalate to {top_sp} management demanding improved delivery performance, implement penalty clauses for delays, and evaluate alternative courier services for future contracts."
+                else:
+                    action_plan = f"Review courier service provider contracts, enforce delivery SLA compliance, and establish performance monitoring system to prevent recurrence."
+
+            elif unit_code == "CICC":
+                action_plan = f"Initiate cybercrime investigation, coordinate with law enforcement agencies, issue public advisory on prevention measures, and pursue legal action against identified perpetrators."
+
+            elif unit_code == "DTI":
+                action_plan = f"Refer cases to DTI Consumer Protection Group, facilitate merchant-consumer mediation, provide complainants with documentation support, and coordinate follow-up on resolution timeline."
+
+            elif unit_code == "SEC":
+                action_plan = f"Coordinate referral to SEC Enforcement Department, assist complainants in filing formal complaints, and monitor SEC's regulatory action against violators."
+
+            elif unit_code == "FPIAP":
+                action_plan = f"Deploy technical team to assess connectivity issues, restore or upgrade affected infrastructure, and implement preventive monitoring system."
+
+            elif unit_code == "GDTB":
+                action_plan = f"Conduct comprehensive system audit, implement technical fixes for identified issues, and enhance user interface based on feedback analysis."
+
+            elif unit_code == "ILCDB":
+                action_plan = f"Review program implementation processes, address identified gaps in service delivery, streamline enrollment/certification procedures, and communicate updated timelines to participants."
+
+            elif unit_code == "IMB":
+                action_plan = f"Conduct infrastructure assessment, resolve technical service disruptions, implement system redundancy, and establish improved backup protocols."
+
+            elif unit_code == "CSB":
+                action_plan = f"Expedite digital certificate processing, address backlog in certificate issuance, and establish fast-track mechanism for urgent requests."
+
+            else:
+                # Generic fallback for any other unit
+                action_plan = f"Conduct thorough investigation of complaints, implement corrective measures to address root causes, and establish monitoring system to prevent recurrence."
 
             fallback_plans.append({
                 "issue": issue['name'],
                 "action_plan": action_plan,
-                "unit": issue['recommended_unit'],
-                "remarks": remarks
+                "unit": unit_code,
+                "remarks": ""
             })
 
         return fallback_plans
@@ -669,8 +771,11 @@ def export_to_pdf(plans_df, top_issues, sp_breakdowns=None):
         top_issues: List of top issues
         sp_breakdowns: Optional list of service provider breakdown data
     """
+    from reportlab.lib.pagesizes import landscape, A4
+
     buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=0.5*inch, bottomMargin=0.5*inch)
+    doc = SimpleDocTemplate(buffer, pagesize=landscape(A4), topMargin=0.5*inch, bottomMargin=0.5*inch,
+                           leftMargin=0.5*inch, rightMargin=0.5*inch)
     elements = []
 
     # Styles
@@ -709,8 +814,33 @@ def export_to_pdf(plans_df, top_issues, sp_breakdowns=None):
     elements.append(Paragraph(f"Generated: {datetime.now().strftime('%B %d, %Y')}", subtitle_style))
     elements.append(Spacer(1, 0.2*inch))
 
+    # Executive Summary
+    body_style = ParagraphStyle(
+        'BodyText',
+        parent=styles['Normal'],
+        fontSize=10,
+        textColor=colors.HexColor('#374151'),
+        spaceAfter=6,
+        leading=14
+    )
+
+    total_top5 = sum([issue['count'] for issue in top_issues])
+    # Note: total_top5 represents complaints in top 5 issues, not total dataset
+    # For full dataset count, would need to pass as parameter
+
+    summary_text = f"""
+    <b>Executive Summary:</b><br/>
+    This report identifies the top 5 priority complaint issues requiring immediate attention and provides strategic
+    action plans for resolution. The analysis covers {total_top5:,} complaints from the top 5 issues, representing the most critical
+    areas for intervention. Each issue has been assigned to the appropriate DICT unit or agency based on their
+    mandate and expertise. Units are requested to review their assigned action plans, provide implementation remarks,
+    and update resolution status as progress is made.
+    """
+    elements.append(Paragraph(summary_text, body_style))
+    elements.append(Spacer(1, 0.2*inch))
+
     # Top Issues Summary
-    elements.append(Paragraph("Top 5 Priority Issues", heading_style))
+    elements.append(Paragraph("I. Top 5 Priority Issues", heading_style))
 
     issues_data = [['#', 'Issue', 'Source', 'Count']]
     for idx, issue in enumerate(top_issues, 1):
@@ -752,22 +882,34 @@ def export_to_pdf(plans_df, top_issues, sp_breakdowns=None):
     elements.append(Spacer(1, 0.3*inch))
 
     # Action Plan Table
-    elements.append(Paragraph("Action Plan Details", heading_style))
+    elements.append(Paragraph("II. Strategic Action Plan Details", heading_style))
 
-    plan_data = [['Issue', 'Action Plan', 'Assigned Unit', 'Remarks']]
+    # Add narrative explanation
+    action_plan_narrative = f"""
+    The following action plans have been developed for each priority issue. Each plan outlines specific interventions
+    required and identifies the responsible DICT unit or agency. The Remarks and Resolution columns are provided for
+    units to document their implementation progress, challenges encountered, and final resolution status.
+    """
+    elements.append(Paragraph(action_plan_narrative, body_style))
+    elements.append(Spacer(1, 0.15*inch))
+
+    plan_data = [['Issue', 'Action Plan', 'Assigned Unit', 'Remarks', 'Resolution']]
     for _, row in plans_df.iterrows():
         plan_data.append([
             Paragraph(str(row['issue']), styles['Normal']),
             Paragraph(str(row['action_plan']), styles['Normal']),
             Paragraph(str(row['unit']), styles['Normal']),
-            Paragraph(str(row['remarks']), styles['Normal'])
+            Paragraph('', styles['Normal']),  # Blank for manual entry
+            Paragraph('', styles['Normal'])   # Blank for manual entry
         ])
 
-    plan_table = Table(plan_data, colWidths=[1.5*inch, 2.5*inch, 1.2*inch, 1.5*inch])
+    # Landscape A4 width is about 11 inches, minus margins = ~10 inches available
+    plan_table = Table(plan_data, colWidths=[2.0*inch, 3.5*inch, 1.3*inch, 2.0*inch, 1.2*inch])
     plan_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#3b82f6')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('ALIGN', (4, 0), (4, -1), 'CENTER'),  # Center align Resolution column
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, 0), 10),
@@ -782,13 +924,36 @@ def export_to_pdf(plans_df, top_issues, sp_breakdowns=None):
 
     elements.append(plan_table)
 
+    # Add note about manual fields
+    note_style = ParagraphStyle(
+        'Note',
+        parent=styles['Normal'],
+        fontSize=8,
+        textColor=colors.HexColor('#6b7280'),
+        spaceAfter=6,
+        leftIndent=0.5*inch,
+        italic=True
+    )
+    elements.append(Spacer(1, 0.1*inch))
+    elements.append(Paragraph("Note: Remarks and Resolution fields are provided blank for units to manually update with progress and observations.", note_style))
+
     # Service Provider Breakdown Section
     if sp_breakdowns and len(sp_breakdowns) > 0:
         elements.append(Spacer(1, 0.3*inch))
-        elements.append(Paragraph("Service Provider Breakdown", heading_style))
+        elements.append(Paragraph("III. Service Provider Analysis", heading_style))
 
-        body_style = ParagraphStyle(
-            'Body',
+        # Add narrative
+        sp_narrative = """
+        For issues related to delivery concerns and telecommunications, the following breakdown identifies specific
+        service providers responsible for the majority of complaints. This granular analysis enables targeted
+        interventions with individual providers to address service quality issues effectively. Each breakdown shows
+        the top 5 service providers contributing to the issue, allowing focused engagement with the most problematic providers.
+        """
+        elements.append(Paragraph(sp_narrative, body_style))
+        elements.append(Spacer(1, 0.15*inch))
+
+        body_style_sp = ParagraphStyle(
+            'BodySP',
             parent=styles['Normal'],
             fontSize=9,
             textColor=colors.HexColor('#374151')
@@ -798,6 +963,19 @@ def export_to_pdf(plans_df, top_issues, sp_breakdowns=None):
             # Issue header
             issue_header = f"{sp_item['issue']} ({sp_item['unit']}) - {sp_item['total_count']} total complaints"
             elements.append(Paragraph(issue_header, styles['Heading3']))
+            elements.append(Spacer(1, 0.1*inch))
+
+            # Add table-specific narrative
+            num_providers = len(sp_item['breakdown'])
+            top_provider_pct = sp_item['breakdown'][0]['percentage'] if sp_item['breakdown'] else 0
+
+            table_narrative = f"""
+            The table below presents the top {num_providers} service providers for this issue category.
+            The leading provider accounts for {top_provider_pct:.1f}% of complaints in this category,
+            indicating {"a concentrated issue requiring focused intervention" if top_provider_pct > 40 else "a distributed problem across multiple providers"}.
+            Coordinating with these providers can directly address {sum([sp['percentage'] for sp in sp_item['breakdown']]):.1f}% of complaints in this category.
+            """
+            elements.append(Paragraph(table_narrative, body_style_sp))
             elements.append(Spacer(1, 0.1*inch))
 
             # SP breakdown table
@@ -827,11 +1005,23 @@ def export_to_pdf(plans_df, top_issues, sp_breakdowns=None):
             elements.append(sp_table)
             elements.append(Spacer(1, 0.15*inch))
 
-            # Top provider note
+            # Top provider analysis and recommendation
             if sp_item['breakdown']:
                 top_sp = sp_item['breakdown'][0]
-                note_text = f"Top provider: {top_sp['provider']} with {top_sp['count']} complaints ({top_sp['percentage']}%)"
-                elements.append(Paragraph(note_text, body_style))
+
+                # Generate actionable recommendation based on data
+                if top_sp['percentage'] > 50:
+                    recommendation = f"Immediate escalation to {top_sp['provider']} management is recommended as they represent the majority of issues."
+                elif top_sp['percentage'] > 30:
+                    recommendation = f"Priority engagement with {top_sp['provider']} while monitoring other providers is advised."
+                else:
+                    recommendation = f"A multi-provider approach is recommended given the distributed nature of complaints."
+
+                analysis_text = f"""
+                <b>Key Finding:</b> {top_sp['provider']} leads with {top_sp['count']} complaints ({top_sp['percentage']}%).
+                <b>Recommended Action:</b> {recommendation}
+                """
+                elements.append(Paragraph(analysis_text, body_style_sp))
                 elements.append(Spacer(1, 0.2*inch))
 
     # Build PDF
@@ -924,7 +1114,7 @@ def export_to_word(plans_df, top_issues, sp_breakdowns=None):
     # Action Plan Section
     doc.add_heading('Action Plan Details', 1)
 
-    plan_table = doc.add_table(rows=1, cols=4)
+    plan_table = doc.add_table(rows=1, cols=5)
     plan_table.style = 'Light Grid Accent 1'
 
     # Header row
@@ -933,6 +1123,7 @@ def export_to_word(plans_df, top_issues, sp_breakdowns=None):
     header_cells[1].text = 'Action Plan'
     header_cells[2].text = 'Assigned Unit'
     header_cells[3].text = 'Remarks'
+    header_cells[4].text = 'Resolution'
 
     # Format header
     for cell in header_cells:
@@ -947,16 +1138,57 @@ def export_to_word(plans_df, top_issues, sp_breakdowns=None):
         row_cells[0].text = str(row['issue'])
         row_cells[1].text = str(row['action_plan'])
         row_cells[2].text = str(row['unit'])
-        row_cells[3].text = str(row['remarks'])
+        row_cells[3].text = ''  # Blank for manual entry
+        row_cells[4].text = ''  # Blank for manual entry
+        # Center align the resolution
+        if row_cells[4].paragraphs:
+            row_cells[4].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    # Add note about manual fields
+    note = doc.add_paragraph()
+    note_run = note.add_run("Note: Remarks and Resolution fields are provided blank for units to manually update with progress and observations.")
+    note_run.font.size = Pt(8)
+    note_run.font.color.rgb = RGBColor(107, 114, 128)
+    note_run.italic = True
 
     # Service Provider Breakdown Section
     if sp_breakdowns and len(sp_breakdowns) > 0:
         doc.add_paragraph()
-        doc.add_heading('Service Provider Breakdown', 1)
+        doc.add_heading('Service Provider Analysis', 1)
+
+        # Add section narrative
+        section_intro = doc.add_paragraph()
+        intro_text = (
+            "For issues related to delivery concerns and telecommunications, the following breakdown identifies "
+            "specific service providers responsible for the majority of complaints. This granular analysis enables "
+            "targeted interventions with individual providers to address service quality issues effectively. "
+            "Each breakdown shows the top 5 service providers contributing to the issue, allowing focused "
+            "engagement with the most problematic providers."
+        )
+        intro_run = section_intro.add_run(intro_text)
+        intro_run.font.size = Pt(10)
+        intro_run.font.color.rgb = RGBColor(55, 65, 81)
+        doc.add_paragraph()
 
         for sp_item in sp_breakdowns:
             # Issue subheading
             issue_heading = doc.add_heading(f"{sp_item['issue']} ({sp_item['unit']}) - {sp_item['total_count']} complaints", 2)
+
+            # Add table-specific narrative
+            num_providers = len(sp_item['breakdown'])
+            top_provider_pct = sp_item['breakdown'][0]['percentage'] if sp_item['breakdown'] else 0
+
+            table_narrative_para = doc.add_paragraph()
+            table_narrative_text = (
+                f"The table below presents the top {num_providers} service providers for this issue category. "
+                f"The leading provider accounts for {top_provider_pct:.1f}% of complaints in this category, "
+                f"indicating {'a concentrated issue requiring focused intervention' if top_provider_pct > 40 else 'a distributed problem across multiple providers'}. "
+                f"Coordinating with these providers can directly address {sum([sp['percentage'] for sp in sp_item['breakdown']]):.1f}% of complaints in this category."
+            )
+            narrative_run = table_narrative_para.add_run(table_narrative_text)
+            narrative_run.font.size = Pt(10)
+            narrative_run.font.color.rgb = RGBColor(55, 65, 81)
+            doc.add_paragraph()
 
             # SP breakdown table
             sp_table = doc.add_table(rows=1, cols=3)
@@ -981,14 +1213,39 @@ def export_to_word(plans_df, top_issues, sp_breakdowns=None):
                 sp_row_cells[1].text = str(sp['count'])
                 sp_row_cells[2].text = f"{sp['percentage']}%"
 
-            # Top provider note
+            # Top provider analysis and recommendation
             if sp_item['breakdown']:
                 top_sp = sp_item['breakdown'][0]
-                note = doc.add_paragraph()
-                note_run = note.add_run(f"Top provider: {top_sp['provider']} with {top_sp['count']} complaints ({top_sp['percentage']}%)")
-                note_run.font.size = Pt(9)
-                note_run.font.color.rgb = RGBColor(55, 65, 81)
-                note_run.italic = True
+
+                # Generate actionable recommendation based on data
+                if top_sp['percentage'] > 50:
+                    recommendation = f"Immediate escalation to {top_sp['provider']} management is recommended as they represent the majority of issues."
+                elif top_sp['percentage'] > 30:
+                    recommendation = f"Priority engagement with {top_sp['provider']} while monitoring other providers is advised."
+                else:
+                    recommendation = f"A multi-provider approach is recommended given the distributed nature of complaints."
+
+                # Key Finding
+                finding_para = doc.add_paragraph()
+                finding_label = finding_para.add_run("Key Finding: ")
+                finding_label.font.bold = True
+                finding_label.font.size = Pt(9)
+                finding_label.font.color.rgb = RGBColor(31, 41, 55)
+
+                finding_text = finding_para.add_run(f"{top_sp['provider']} leads with {top_sp['count']} complaints ({top_sp['percentage']}%).")
+                finding_text.font.size = Pt(9)
+                finding_text.font.color.rgb = RGBColor(55, 65, 81)
+
+                # Recommended Action
+                action_para = doc.add_paragraph()
+                action_label = action_para.add_run("Recommended Action: ")
+                action_label.font.bold = True
+                action_label.font.size = Pt(9)
+                action_label.font.color.rgb = RGBColor(31, 41, 55)
+
+                action_text = action_para.add_run(recommendation)
+                action_text.font.size = Pt(9)
+                action_text.font.color.rgb = RGBColor(55, 65, 81)
 
             doc.add_paragraph()
 
@@ -1007,28 +1264,28 @@ def render_weekly_report(df):
     # Header
     st.markdown("""
     <div class="report-header">
-        <div class="report-title">📊 AI Action Plan Report</div>
-        <div class="report-subtitle">AI-Powered Complaint Analysis & Strategic Recommendations</div>
+        <div class="report-title">DICT AI-Powered Action Plan Report</div>
+        <div class="report-subtitle">Strategic Analysis and Recommendations for Priority Complaint Issues</div>
     </div>
     """, unsafe_allow_html=True)
 
     # Date and status info
     col_info1, col_info2 = st.columns([2, 1])
     with col_info1:
-        st.caption(f"📅 Report Date: {datetime.now().strftime('%A, %B %d, %Y')}")
+        st.caption(f"Report Date: {datetime.now().strftime('%B %d, %Y')}")
     with col_info2:
         if 'report_timestamp' in st.session_state:
-            st.caption(f"🕐 Last Generated: {st.session_state.report_timestamp.strftime('%H:%M:%S')}")
+            st.caption(f"Last Generated: {st.session_state.report_timestamp.strftime('%I:%M %p')}")
 
     st.markdown("<br>", unsafe_allow_html=True)
 
     if df is None or df.empty:
-        st.info("📊 No data available to generate report. Please load complaint data from the **Dashboard** tab first.")
+        st.info("No data available to generate report. Please load complaint data from the Dashboard tab first.")
         st.markdown("""
-        ### How to get started:
-        1. Go to the **Dashboard** tab
-        2. Load your complaint data using the sidebar
-        3. Return to this tab to generate AI insights
+        **Instructions:**
+        1. Navigate to the Dashboard tab
+        2. Load complaint data using the sidebar options
+        3. Return to this tab to generate the AI-powered action plan
         """)
         return
 
@@ -1053,10 +1310,10 @@ def render_weekly_report(df):
 
     st.markdown(f"""
     <div class="info-card">
-        <strong>ℹ️ About This Report:</strong> This AI-powered tool analyzes your complaint data to identify the top 5
-        priority issues and generates strategic action plans with recommended DICT units for resolution.
+        <strong>Executive Summary:</strong> This report provides AI-powered analysis of complaint data to identify top priority issues
+        and generates strategic action plans with recommended DICT units for resolution.
         <br><br>
-        <strong>📊 Data Source:</strong> Using {total_records:,} complaints from the dashboard (excluding FLS resolutions){date_range_info}
+        <strong>Data Coverage:</strong> Analysis based on {total_records:,} complaints (excluding FLS resolutions){date_range_info}
     </div>
     """, unsafe_allow_html=True)
 
@@ -1064,47 +1321,61 @@ def render_weekly_report(df):
     is_init, error_msg = init_vertex_ai()
 
     if not is_init:
-        st.warning("⚠️ Vertex AI not initialized. AI features disabled.")
-        with st.expander("ℹ️ Error Details"):
+        st.warning("Vertex AI not initialized. AI features are currently disabled.")
+        with st.expander("Error Details"):
             if error_msg:
                 st.caption(f"Error: {error_msg}")
-                st.caption("Ensure you have 'Vertex AI User' role and the API is enabled in Google Cloud.")
+                st.caption("Please ensure you have 'Vertex AI User' role and the API is enabled in Google Cloud.")
 
     # Get Top Issues (always compute to show preview)
     top_issues = get_top_issues(df)
 
     if not top_issues:
-        st.warning("⚠️ Not enough data to identify top issues. Please ensure your data has 'Complaint Category' or 'Complaint Nature' columns.")
+        st.warning("Insufficient data to identify top issues. Please ensure your data has 'Complaint Category' or 'Complaint Nature' columns.")
         return
 
-    # Preview Top Issues with Unit Recommendations
-    with st.expander("📊 Preview: Top Issues Detected & Recommended Units", expanded=False):
-        # Enrich issues with unit recommendations
-        preview_data = []
-        for issue in top_issues:
-            unit_code, unit_name, org_type = categorize_issue_to_unit(issue['name'], issue['type'])
-            preview_data.append({
-                "Issue": issue['name'],
-                "Source": issue['type'],
-                "Count": issue['count'],
-                "Recommended Unit": unit_code,
-                "Organization": org_type
-            })
+    # Preview Top Issues with Unit Recommendations - Enhanced Presentation
+    st.markdown("### I. Top 5 Priority Issues")
 
-        preview_df = pd.DataFrame(preview_data)
-        st.dataframe(
-            preview_df,
-            column_config={
-                "Issue": st.column_config.TextColumn("Issue Description", width="large"),
-                "Source": st.column_config.TextColumn("Source", width="small"),
-                "Count": st.column_config.NumberColumn("Complaints", format="%d", width="small"),
-                "Recommended Unit": st.column_config.TextColumn("Assigned To", width="medium"),
-                "Organization": st.column_config.TextColumn("Type", width="medium")
-            },
-            hide_index=True,
-            use_container_width=True
-        )
-        st.caption("💡 **Source**: Category/Nature field | **Assigned To**: Auto-categorized DICT unit/agency | **Type**: Organization classification")
+    # Calculate total complaints in top 5
+    total_top5 = sum([issue['count'] for issue in top_issues])
+    coverage_pct = (total_top5 / total_records * 100) if total_records > 0 else 0
+
+    st.markdown(f"""
+    <div class="info-card" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left: 4px solid #f59e0b;">
+        <strong>Impact Analysis:</strong> The top 5 priority issues represent <strong>{total_top5:,} complaints ({coverage_pct:.1f}%)</strong> of the total dataset.
+        Addressing these priorities will have the most significant impact on reducing overall complaint volume.
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Enrich issues with unit recommendations
+    preview_data = []
+    for idx, issue in enumerate(top_issues, 1):
+        unit_code, unit_name, org_type = categorize_issue_to_unit(issue['name'], issue['type'])
+        preview_data.append({
+            "#": idx,
+            "Issue": issue['name'],
+            "Source": issue['type'],
+            "Count": issue['count'],
+            "Recommended Unit": unit_code,
+            "Organization": org_type
+        })
+
+    preview_df = pd.DataFrame(preview_data)
+    st.dataframe(
+        preview_df,
+        column_config={
+            "#": st.column_config.NumberColumn("Rank", width="small"),
+            "Issue": st.column_config.TextColumn("Issue Description", width="large"),
+            "Source": st.column_config.TextColumn("Source", width="small"),
+            "Count": st.column_config.NumberColumn("Complaints", format="%d", width="small"),
+            "Recommended Unit": st.column_config.TextColumn("Assigned Unit", width="medium"),
+            "Organization": st.column_config.TextColumn("Organization Type", width="medium")
+        },
+        hide_index=True,
+        use_container_width=True
+    )
+    st.caption("**Note:** Source indicates whether the issue is from Category or Nature field. Assigned Unit is auto-categorized based on DICT organizational structure.")
 
     st.markdown("---")
 
@@ -1113,7 +1384,7 @@ def render_weekly_report(df):
 
     with col_btn:
         generate_button = st.button(
-            "🤖 Generate AI Action Plan",
+            "Generate Strategic Action Plan",
             type="primary",
             use_container_width=True,
             help="Analyze top complaints and generate strategic action plans"
@@ -1122,23 +1393,24 @@ def render_weekly_report(df):
     # Handle generation
     if generate_button or ('weekly_action_plan' in st.session_state and st.session_state.get('report_generated', False)):
         if generate_button:
-            with st.spinner("🤖 AI is analyzing top complaints and generating strategic action plans..."):
+            with st.spinner("Analyzing complaint data and generating strategic action plans..."):
                 if is_init:
                     action_plan_data = generate_ai_action_plan(top_issues, df)  # Pass df for SP analysis
                 else:
-                    # Fallback if no AI
-                    action_plan_data = [
-                        {
+                    # Fallback if no AI - generate concise action plans with blank remarks
+                    action_plan_data = []
+                    for i in top_issues:
+                        unit_code, unit_name, org_type = categorize_issue_to_unit(i['name'], i['type'])
+                        action_plan_data.append({
                             "issue": i['name'],
-                            "action_plan": "Analyze root cause and coordinate with service providers to resolve this issue.",
-                            "unit": "Operations Team",
-                            "remarks": f"High volume detected: {i['count']} complaints"
-                        } for i in top_issues
-                    ]
+                            "action_plan": f"Coordinate with {unit_code} to address complaints",
+                            "unit": unit_code,
+                            "remarks": ""
+                        })
                 st.session_state.weekly_action_plan = action_plan_data
                 st.session_state.report_generated = True
                 st.session_state.report_timestamp = datetime.now()
-                st.success("✅ Action plan generated successfully!")
+                st.success("Action plan generated successfully.")
 
         # Display the action plan
         if 'weekly_action_plan' in st.session_state:
@@ -1149,8 +1421,8 @@ def render_weekly_report(df):
 
             st.markdown("<br>", unsafe_allow_html=True)
             st.markdown("---")
-            st.markdown("### 📋 Strategic Action Plan")
-            st.caption(f"Generated {len(report_df)} strategic recommendations based on top complaint patterns")
+            st.markdown("### II. Strategic Action Plan Details")
+            st.caption(f"Generated {len(report_df)} strategic recommendations based on analysis of top complaint patterns")
 
             # Responsive table with horizontal scroll
             import html
@@ -1163,6 +1435,7 @@ def render_weekly_report(df):
             table_html += '<th class="col-action">Action Plan</th>\n'
             table_html += '<th class="col-unit">Assigned Unit</th>\n'
             table_html += '<th class="col-remarks">Remarks</th>\n'
+            table_html += '<th class="col-resolution">Resolution</th>\n'
             table_html += '</tr>\n</thead>\n<tbody>\n'
 
             for _, row in report_df.iterrows():
@@ -1170,23 +1443,26 @@ def render_weekly_report(df):
                 issue = html.escape(str(row['issue']))
                 action = html.escape(str(row['action_plan']))
                 unit = html.escape(str(row['unit']))
-                remarks = html.escape(str(row['remarks']))
 
                 table_html += '<tr>\n'
                 table_html += f'<td class="col-issue"><strong>{issue}</strong></td>\n'
                 table_html += f'<td class="col-action">{action}</td>\n'
                 table_html += f'<td class="col-unit">{unit}</td>\n'
-                table_html += f'<td class="col-remarks">{remarks}</td>\n'
+                table_html += f'<td class="col-remarks"></td>\n'
+                table_html += f'<td class="col-resolution"></td>\n'
                 table_html += '</tr>\n'
 
             table_html += '</tbody>\n</table>\n</div>'
 
             st.markdown(table_html, unsafe_allow_html=True)
 
+            # Add explanatory note for manual fields
+            st.caption("**Note:** Remarks and Resolution fields are provided for units to manually update progress and observations.")
+
             # Service Provider Breakdown for PRD and NTC issues
             st.markdown("---")
-            st.markdown("### 📊 Service Provider Breakdown")
-            st.caption("Detailed breakdown for Delivery Concerns and Telco/Internet Issues")
+            st.markdown("### III. Service Provider Analysis")
+            st.caption("Detailed breakdown for Delivery Concerns and Telecommunications Issues")
 
             # Check which issues need SP breakdown
             issues_with_breakdown = []
@@ -1210,7 +1486,7 @@ def render_weekly_report(df):
 
             if issues_with_breakdown:
                 for item in issues_with_breakdown:
-                    with st.expander(f"🔍 {item['issue']} ({item['unit']}) - {item['total_count']} complaints", expanded=True):
+                    with st.expander(f"{item['issue']} ({item['unit']}) - {item['total_count']} complaints", expanded=True):
                         # Create breakdown table
                         sp_df = pd.DataFrame(item['breakdown'])
 
@@ -1226,16 +1502,38 @@ def render_weekly_report(df):
                         )
 
                         # Summary stats
-                        st.caption(f"📌 Top provider: **{item['breakdown'][0]['provider']}** with {item['breakdown'][0]['count']} complaints ({item['breakdown'][0]['percentage']}%)")
-                        st.caption(f"📊 Total providers: {len(item['breakdown'])}")
+                        st.caption(f"Top Provider: **{item['breakdown'][0]['provider']}** with {item['breakdown'][0]['count']} complaints ({item['breakdown'][0]['percentage']}%)")
+                        st.caption(f"Total Providers Identified: {len(item['breakdown'])}")
+
+                        # Add concise explanation
+                        st.markdown("---")
+                        st.markdown("**Analysis and Recommendations:**")
+
+                        # Calculate insights
+                        top_provider = item['breakdown'][0]
+                        top_provider_pct = top_provider['percentage']
+                        num_providers = len(item['breakdown'])
+
+                        # Generate contextual explanation based on the data
+                        if top_provider_pct > 50:
+                            concentration = "highly concentrated"
+                            recommendation = f"Focus immediate attention on **{top_provider['provider']}** as they account for the majority of issues. Consider escalating to their management team."
+                        elif top_provider_pct > 30:
+                            concentration = "moderately concentrated"
+                            recommendation = f"Prioritize **{top_provider['provider']}** while monitoring other providers. A targeted intervention could significantly reduce complaints."
+                        else:
+                            concentration = "distributed across multiple providers"
+                            recommendation = f"Issues are spread across {num_providers} providers. Consider a broader systemic approach rather than targeting individual providers."
+
+                        st.write(f"Complaint distribution for this issue is **{concentration}**, with the leading provider accounting for **{top_provider_pct:.1f}%** of all complaints in this category. {recommendation}")
             else:
-                st.info("ℹ️ No Delivery Concerns or Telco/Internet Issues in top 5 complaints that require service provider breakdown.")
+                st.info("No Delivery Concerns or Telecommunications Issues identified in the top 5 priority complaints requiring detailed service provider analysis.")
 
             st.markdown("---")
 
             # Download Buttons Section
-            st.markdown("### 📥 Export Options")
-            st.caption("Download the action plan in your preferred format")
+            st.markdown("### IV. Export Options")
+            st.caption("Download the strategic action plan in your preferred format")
 
             col_dl1, col_dl2, col_dl3 = st.columns(3)
 
@@ -1244,46 +1542,46 @@ def render_weekly_report(df):
                 try:
                     pdf_buffer = export_to_pdf(report_df, top_issues, issues_with_breakdown)
                     st.download_button(
-                        label="📄 PDF Document",
+                        label="PDF Document",
                         data=pdf_buffer,
                         file_name=f"DICT_AI_Action_Plan_{datetime.now().strftime('%Y%m%d')}.pdf",
                         mime="application/pdf",
                         use_container_width=True,
-                        help="Download formatted PDF report with SP breakdown"
+                        help="Download formatted PDF report with service provider analysis"
                     )
                 except Exception as e:
-                    st.error(f"❌ PDF Export Error: {str(e)}")
+                    st.error(f"PDF Export Error: {str(e)}")
 
             with col_dl2:
                 # Word Download
                 try:
                     word_buffer = export_to_word(report_df, top_issues, issues_with_breakdown)
                     st.download_button(
-                        label="📝 Word Document",
+                        label="Word Document",
                         data=word_buffer,
                         file_name=f"DICT_AI_Action_Plan_{datetime.now().strftime('%Y%m%d')}.docx",
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                         use_container_width=True,
-                        help="Download editable Word document with SP breakdown"
+                        help="Download editable Word document with service provider analysis"
                     )
                 except Exception as e:
-                    st.error(f"❌ Word Export Error: {str(e)}")
+                    st.error(f"Word Export Error: {str(e)}")
 
             with col_dl3:
                 # CSV Download
                 csv_buffer = report_df.to_csv(index=False)
                 st.download_button(
-                    label="📊 CSV Spreadsheet",
+                    label="CSV Spreadsheet",
                     data=csv_buffer,
                     file_name=f"DICT_AI_Action_Plan_{datetime.now().strftime('%Y%m%d')}.csv",
                     mime="text/csv",
                     use_container_width=True,
-                    help="Download data as CSV file"
+                    help="Download data in CSV format"
                 )
 
             # Summary Metrics
             st.markdown("---")
-            st.markdown("### 📈 Report Summary")
+            st.markdown("### V. Report Summary")
 
             m1, m2, m3, m4 = st.columns(4)
 
@@ -1313,8 +1611,8 @@ def render_weekly_report(df):
 
             # Unit Distribution Analysis with Specific Details
             st.markdown("---")
-            st.markdown("### 🏢 Assigned Units & Top Service Providers")
-            st.caption("Specific agencies and service providers requiring action")
+            st.markdown("### VI. Unit Assignment and Service Provider Details")
+            st.caption("Agencies and service providers requiring intervention")
 
             # Build detailed breakdown with service providers
             unit_details = []
@@ -1375,7 +1673,7 @@ def render_weekly_report(df):
             )
 
             # Summary by category
-            st.markdown("#### Summary by Organization Type")
+            st.markdown("#### A. Summary by Organization Type")
             col_sum1, col_sum2, col_sum3 = st.columns(3)
 
             delivery_units = [d for d in unit_details if d['Category'] == "Delivery Unit (DICT)"]
@@ -1415,13 +1713,13 @@ def render_weekly_report(df):
             # Validation status
             unclassified = [d for d in unit_details if d['Category'] == "Unclassified"]
             if unclassified:
-                st.warning(f"⚠️ {len(unclassified)} issue(s) could not be categorized properly")
+                st.warning(f"{len(unclassified)} issue(s) could not be categorized properly")
                 for item in unclassified:
                     st.caption(f"• {item['Unit Code']} - {item['Issue']}")
             else:
-                st.success("✅ All issues successfully categorized to appropriate units/agencies")
+                st.success("All issues successfully categorized to appropriate units and agencies")
 
     else:
         # Show placeholder when no report is generated
         st.markdown("<br>", unsafe_allow_html=True)
-        st.info("👆 Click the **Generate AI Action Plan** button above to analyze your complaint data and create strategic recommendations.")
+        st.info("Click the **Generate Strategic Action Plan** button above to analyze your complaint data and create strategic recommendations.")

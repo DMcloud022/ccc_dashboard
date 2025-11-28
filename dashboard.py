@@ -832,6 +832,11 @@ def filter_by_date(df, start_month, start_year=None):
             return df
 
         start_date = pd.Timestamp(year=start_year, month=start_month, day=1)
+        # Add validation to ensure Date of Complaint column contains valid dates
+        if df['Date of Complaint'].dtype != 'datetime64[ns]':
+            st.warning("Date of Complaint column contains non-datetime values. Attempting conversion...")
+            df['Date of Complaint'] = pd.to_datetime(df['Date of Complaint'], errors='coerce')
+
         filtered_df = df[df['Date of Complaint'] >= start_date].copy()
         return filtered_df
     except Exception as e:
@@ -1122,7 +1127,7 @@ def main():
     st.markdown('<h1 style="font-size: 2rem; font-weight: 700; margin-bottom: 0.75rem;">📊 Complaint Analysis Dashboard</h1>', unsafe_allow_html=True)
     
     # Navigation Tabs
-    tab_dashboard, tab_ai_report = st.tabs(["📈 Dashboard", "🤖 AI Action Plan"])
+    tab_dashboard, tab_ai_report = st.tabs(["Dashboard", "AI Action Plan"])
 
     # Sidebar for data loading and settings
     with st.sidebar:
@@ -1229,7 +1234,9 @@ def main():
 
             # Compact Data Preview
             with st.expander("📋 View Data", expanded=False):
-                st.dataframe(df.head(3), use_container_width=True, height=150)    # Determine refresh rate for the fragment
+                st.dataframe(df.head(3), use_container_width=True, height=150)
+
+    # Determine refresh rate for the fragment
     # If data source is uploaded file, auto-refresh is not needed unless explicitly desired (but file won't change)
     # For now, we respect the user's auto-refresh setting for all sources
     refresh_rate = st.session_state.refresh_interval if st.session_state.auto_refresh else None
@@ -1261,9 +1268,11 @@ def main():
             if creds and url:
                 df = load_data_from_gsheet_with_auth(creds, url, current_time)
         
-        # Fallback to initial_df if reload failed but we had data
+        # Don't use stale data - if reload fails, show error instead
+        # Using old data could mislead users about real-time status
         if df is None and initial_df is not None and source_type != 'upload':
-             df = initial_df
+            st.warning("⚠️ Unable to refresh data. Please check your connection and data source.")
+            df = initial_df  # Use cached data but warn user
 
         if df is None or df.empty:
             st.info("👈 Please load data from the sidebar to begin analysis")
