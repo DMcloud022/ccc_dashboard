@@ -80,7 +80,7 @@ DICT_UNIT_MAPPING = {
         "service_providers": ["CSB", "PNPKI"]
     },
     "PRD": {
-        "name": "Procurement and Records Division",
+        "name": "Postal Regulation Division",
         "keywords": ["delivery concern", "courier", "logistics", "shipping", "parcel", "package"],
         "service_providers": ["LBC", "Ninja Van", "GO21", "GoGo Xpress", "Flash Express", "J&T", "J&T Express", "2GO", "SPX", "Lalamove"]
     },
@@ -339,6 +339,135 @@ div[data-testid="stDownloadButton"] > button:hover {
     color: #3b82f6;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     transform: translateY(-1px);
+}
+
+/* Comprehensive Data Editor Cell Styling - Compact with Proper Text Wrapping */
+
+/* Main container */
+div[data-testid="stDataFrame"] {
+    font-size: 0.875rem;
+    overflow-x: auto !important;
+}
+
+div[data-testid="stDataFrame"] div[data-testid="stDataFrameResizable"] {
+    min-height: auto !important;
+}
+
+/* Glide Data Editor - Core wrapping fix */
+.glide-data-editor {
+    overflow: visible !important;
+}
+
+.glide-data-editor .dvn-scroller {
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+}
+
+/* All cells - proper wrapping and compact sizing */
+.glide-data-editor .dvn-underlay > div,
+.glide-data-editor .gdg-cell,
+div[data-testid="stDataFrame"] .glide-cell,
+div[data-testid="stDataFrame"] td,
+div[data-testid="stDataFrame"] th {
+    white-space: pre-wrap !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    word-break: break-word !important;
+    line-height: 1.5 !important;
+    padding: 8px 6px !important;
+    vertical-align: top !important;
+    min-height: auto !important;
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
+}
+
+/* Cell content wrapper */
+.glide-data-editor .gdg-cell > div,
+.glide-data-editor .dvn-underlay > div > div {
+    white-space: pre-wrap !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    word-break: break-word !important;
+    max-width: 100% !important;
+    overflow: visible !important;
+    line-height: 1.5 !important;
+}
+
+/* Text content in cells */
+.glide-data-editor .gdg-cell span,
+.glide-data-editor .dvn-underlay span {
+    white-space: pre-wrap !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    word-break: break-word !important;
+    display: block !important;
+    line-height: 1.5 !important;
+}
+
+/* Editable text areas and inputs - compact but usable */
+div[data-testid="stDataFrame"] textarea,
+div[data-testid="stDataFrame"] input[type="text"],
+.glide-data-editor textarea,
+.glide-data-editor input[type="text"] {
+    min-height: 80px !important;
+    line-height: 1.5 !important;
+    padding: 8px !important;
+    resize: vertical !important;
+    white-space: pre-wrap !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    font-size: 0.875rem !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+/* Prevent cell content overflow */
+.glide-data-editor .gdg-cell,
+.glide-data-editor .dvn-underlay > div {
+    overflow: visible !important;
+    text-overflow: clip !important;
+}
+
+/* Column headers - compact */
+.glide-data-editor .gdg-header-cell {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    padding: 8px 6px !important;
+}
+
+/* Ensure rows expand to fit content but start compact */
+.glide-data-editor .gdg-row {
+    min-height: auto !important;
+    height: auto !important;
+}
+
+/* Fix for data grid canvas - compact */
+.glide-data-editor canvas {
+    min-height: auto !important;
+}
+
+/* Prevent table overflow and ensure proper scrolling */
+div[data-testid="stDataFrame"] > div {
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+}
+
+/* Ensure proper spacing between rows - compact */
+.glide-data-editor .gdg-growing-entry {
+    min-height: auto !important;
+    overflow: visible !important;
+}
+
+/* Fix cell overlay positioning */
+.glide-data-editor .gdg-overlay {
+    overflow: visible !important;
+}
+
+/* Ensure edit overlay expands properly - compact */
+.glide-data-editor .gdg-edit-overlay {
+    min-height: 80px !important;
+    overflow: visible !important;
 }
 </style>
 """
@@ -615,7 +744,7 @@ DICT ORGANIZATIONAL STRUCTURE - UNIT ASSIGNMENT GUIDE WITH ACTION PLAN TEMPLATES
    - CSB (Cybersecurity Bureau): Digital certificates, PKI, encryption
      Template: "Fast-track certificate issuance/renewal process, resolve [specific issue], and establish expedited processing for backlog"
 
-   - PRD (Procurement and Records Division): Delivery concerns, courier/logistics
+   - PRD (Postal Regulation Division): Delivery concerns, courier/logistics
      Template: "Escalate to [Top Service Provider] management, demand improved SLA compliance, establish penalty mechanism for delays, and explore alternative couriers"
 
    - ROCS (Regional Operations): Regional office concerns
@@ -675,7 +804,17 @@ DICT ORGANIZATIONAL STRUCTURE - UNIT ASSIGNMENT GUIDE WITH ACTION PLAN TEMPLATES
         - Use professional government language suitable for executive review
         - ALWAYS use the "recommended_unit" from the enriched_issues data
         - Keep action plans to 2-3 sentences maximum
-        - Remarks field must be an empty string ""
+
+        REMARKS FIELD INSTRUCTIONS:
+        - Generate SPECIFIC, CONTEXTUAL remarks based on the actual data analysis for each issue
+        - Include relevant metrics (complaint count, percentage, top provider if applicable)
+        - Highlight priority level, urgency, or special considerations based on the actual issue
+        - Examples of good remarks:
+          * "Issue affects 234 users (45% of total complaints). Top provider J&T Express accounts for 67% of delivery issues."
+          * "Critical priority - complaint volume increased 300% from previous period. Immediate intervention required."
+          * "Recurring issue with PLDT services across multiple regions. Coordinate regulatory action with NTC."
+          * "Limited to specific region. Monitor for pattern expansion before escalating intervention."
+        - DO NOT use generic templates - base remarks on actual issue data provided above
 
         Return ONLY a valid JSON array with keys: "issue", "action_plan", "unit", "remarks".
         Do not include markdown formatting like ```json.
@@ -724,9 +863,21 @@ DICT ORGANIZATIONAL STRUCTURE - UNIT ASSIGNMENT GUIDE WITH ACTION PLAN TEMPLATES
                 if i < len(enriched_issues):
                     plan["unit"] = enriched_issues[i]["recommended_unit"]
 
-            # Ensure remarks field exists
-            if "remarks" not in plan:
-                plan["remarks"] = ""
+            # Ensure remarks field exists (AI should have generated this)
+            if "remarks" not in plan or not plan["remarks"]:
+                # Minimal fallback only if AI failed to generate remarks
+                if i < len(enriched_issues):
+                    issue_data = enriched_issues[i]
+                    count = issue_data.get('count', 0)
+                    top_sp = issue_data.get('top_service_provider', '')
+
+                    # Create data-driven remark as minimal fallback
+                    remark_parts = [f"Affects {count:,} complaints"]
+                    if top_sp:
+                        remark_parts.append(f"Top provider: {top_sp}")
+                    plan["remarks"] = ". ".join(remark_parts) + ". Requires immediate attention."
+                else:
+                    plan["remarks"] = "Awaiting detailed analysis and implementation."
 
             validated_plans.append(plan)
 
@@ -782,11 +933,18 @@ DICT ORGANIZATIONAL STRUCTURE - UNIT ASSIGNMENT GUIDE WITH ACTION PLAN TEMPLATES
                 # Generic fallback for any other unit
                 action_plan = f"Conduct thorough investigation of complaints, implement corrective measures to address root causes, and establish monitoring system to prevent recurrence."
 
+            # Generate minimal data-driven remarks for fallback (AI failure scenario)
+            count = issue.get('count', 0)
+            remark_parts = [f"Affects {count:,} complaints"]
+            if top_sp:
+                remark_parts.append(f"Top provider: {top_sp} ({sp_percentage:.1f}%)")
+            remarks = ". ".join(remark_parts) + ". Requires prompt action."
+
             fallback_plans.append({
                 "issue": issue['name'],
                 "action_plan": action_plan,
                 "unit": unit_code,
-                "remarks": ""
+                "remarks": remarks
             })
 
         return fallback_plans
@@ -921,7 +1079,7 @@ def export_to_pdf(plans_df, top_issues, sp_breakdowns=None):
     elements.append(Paragraph(action_plan_narrative, body_style))
     elements.append(Spacer(1, 0.15*inch))
 
-    plan_data = [['Issue', 'Action Plan', 'Assigned Unit', 'Remarks', 'Resolution']]
+    plan_data = [['Issue', 'Action Plan', 'Assigned Unit', 'Remarks', 'Action Taken by the Unit']]
     for _, row in plans_df.iterrows():
         # Use actual values from edited data (remarks and resolution may be edited)
         remarks_text = str(row.get('remarks', '')) if pd.notna(row.get('remarks', '')) else ''
@@ -967,7 +1125,7 @@ def export_to_pdf(plans_df, top_issues, sp_breakdowns=None):
         italic=True
     )
     elements.append(Spacer(1, 0.1*inch))
-    elements.append(Paragraph("Note: This report includes any edits made to the Action Plan, Remarks, and Resolution fields before download.", note_style))
+    elements.append(Paragraph("Note: This report includes any edits made to the Action Plan, Remarks, and Action Taken by the Unit fields before download.", note_style))
 
     # Service Provider Breakdown Section
     if sp_breakdowns and len(sp_breakdowns) > 0:
@@ -1155,7 +1313,7 @@ def export_to_word(plans_df, top_issues, sp_breakdowns=None):
     header_cells[1].text = 'Action Plan'
     header_cells[2].text = 'Assigned Unit'
     header_cells[3].text = 'Remarks'
-    header_cells[4].text = 'Resolution'
+    header_cells[4].text = 'Action Taken by the Unit'
 
     # Format header
     for cell in header_cells:
@@ -1182,7 +1340,7 @@ def export_to_word(plans_df, top_issues, sp_breakdowns=None):
 
     # Add note about editable fields
     note = doc.add_paragraph()
-    note_run = note.add_run("Note: This report includes any edits made to the Action Plan, Remarks, and Resolution fields before download.")
+    note_run = note.add_run("Note: This report includes any edits made to the Action Plan, Remarks, and Action Taken by the Unit fields before download.")
     note_run.font.size = Pt(8)
     note_run.font.color.rgb = RGBColor(107, 114, 128)
     note_run.italic = True
@@ -1433,15 +1591,20 @@ def render_weekly_report(df):
                 if is_init:
                     action_plan_data = generate_ai_action_plan(top_issues, df)  # Pass df for SP analysis
                 else:
-                    # Fallback if no AI - generate concise action plans with blank remarks
+                    # Fallback if no AI - generate concise action plans with minimal data-driven remarks
                     action_plan_data = []
                     for i in top_issues:
                         unit_code, unit_name, org_type = categorize_issue_to_unit(i['name'], i['type'])
+
+                        # Generate minimal data-driven remarks (non-AI scenario)
+                        count = i.get('count', 0)
+                        remarks = f"Affects {count:,} complaints. Assigned to {unit_code} for resolution."
+
                         action_plan_data.append({
                             "issue": i['name'],
                             "action_plan": f"Coordinate with {unit_code} to address complaints",
                             "unit": unit_code,
-                            "remarks": ""
+                            "remarks": remarks
                         })
                 st.session_state.weekly_action_plan = action_plan_data
                 st.session_state.report_generated = True
@@ -1465,7 +1628,7 @@ def render_weekly_report(df):
                 st.warning("Action plan data is empty. Please regenerate the report.")
                 return
 
-            # Add Resolution column if it doesn't exist
+            # Add resolution column if it doesn't exist (internal name stays 'resolution')
             if 'resolution' not in report_df.columns:
                 report_df['resolution'] = ''
 
@@ -1475,7 +1638,7 @@ def render_weekly_report(df):
                 'action_plan': 'Action Plan',
                 'unit': 'Assigned Unit',
                 'remarks': 'Remarks',
-                'resolution': 'Resolution'
+                'resolution': 'Action Taken by the Unit'
             })
 
             st.markdown("<br>", unsafe_allow_html=True)
@@ -1484,17 +1647,63 @@ def render_weekly_report(df):
             st.caption(f"Generated {len(report_df)} strategic recommendations based on analysis of top complaint patterns")
 
             # Info box about editing
-            st.info("💡 **You can edit the table below!** Click on any cell in the Action Plan, Remarks, or Resolution columns to modify the content before downloading.")
+            st.info("💡 **Fully Editable Table!** All fields can be edited. Make your changes, then scroll down and click 'Save All Changes' to apply.")
 
-            # Editable data editor
+            # Initialize edited_action_plan on first load only
+            if 'edited_action_plan' not in st.session_state:
+                st.session_state.edited_action_plan = report_df.copy()
+                st.session_state.data_changed = True
+
+            # Use saved data for display (or original if not yet saved)
+            display_source_df = st.session_state.edited_action_plan.copy()
+
+            # Ensure resolution column exists
+            if 'resolution' not in display_source_df.columns:
+                display_source_df['resolution'] = ''
+
+            # Rename columns for display
+            display_df_for_editor = display_source_df.rename(columns={
+                'issue': 'Top Issue',
+                'action_plan': 'Action Plan',
+                'unit': 'Assigned Unit',
+                'remarks': 'Remarks',
+                'resolution': 'Action Taken by the Unit'
+            })
+
+            # Editable data editor - ALL fields are editable with proper wrapping
             edited_df = st.data_editor(
-                display_df,
+                display_df_for_editor,
                 column_config={
-                    "Top Issue": st.column_config.TextColumn("Top Issue", width="medium", disabled=True),
-                    "Action Plan": st.column_config.TextColumn("Action Plan", width="large", help="Edit action plan as needed"),
-                    "Assigned Unit": st.column_config.TextColumn("Assigned Unit", width="small", disabled=True),
-                    "Remarks": st.column_config.TextColumn("Remarks", width="medium", help="Add implementation remarks"),
-                    "Resolution": st.column_config.TextColumn("Resolution", width="small", help="Update resolution status")
+                    "Top Issue": st.column_config.TextColumn(
+                        "Top Issue",
+                        width=200,
+                        disabled=False,
+                        help="Click to edit issue name"
+                    ),
+                    "Action Plan": st.column_config.TextColumn(
+                        "Action Plan",
+                        width=400,
+                        disabled=False,
+                        help="Click to edit the action plan"
+                    ),
+                    "Assigned Unit": st.column_config.TextColumn(
+                        "Assigned Unit",
+                        width=120,
+                        disabled=False,
+                        help="Click to change assigned unit"
+                    ),
+                    "Remarks": st.column_config.TextColumn(
+                        "Remarks",
+                        width=300,
+                        disabled=False,
+                        help="Click to add or edit remarks"
+                    ),
+                    "Action Taken by the Unit": st.column_config.TextColumn(
+                        "Action Taken by the Unit",
+                        width=250,
+                        disabled=False,
+                        help="Click to update actions taken"
+                    )
                 },
                 hide_index=True,
                 use_container_width=True,
@@ -1502,33 +1711,8 @@ def render_weekly_report(df):
                 key="action_plan_editor"
             )
 
-            # Store edited data in session state for export
-            new_edited_df = edited_df.rename(columns={
-                'Top Issue': 'issue',
-                'Action Plan': 'action_plan',
-                'Assigned Unit': 'unit',
-                'Remarks': 'remarks',
-                'Resolution': 'resolution'
-            })
-
-            # Check if data actually changed to trigger regeneration
-            # Use try-except to handle edge cases with dataframe comparison
-            data_has_changed = True
-            try:
-                if 'edited_action_plan' in st.session_state:
-                    old_df = st.session_state.edited_action_plan
-                    # Compare dataframes safely
-                    if isinstance(old_df, pd.DataFrame) and not old_df.empty and new_edited_df.equals(old_df):
-                        data_has_changed = False
-            except Exception:
-                # If comparison fails, assume data changed
-                data_has_changed = True
-
-            st.session_state.edited_action_plan = new_edited_df
-            st.session_state.data_changed = data_has_changed
-
-            # Add explanatory note
-            st.caption("**Note:** Your edits are automatically saved and will be included in downloaded reports.")
+            # Store edited main table temporarily (local variable only - no state change)
+            temp_edited_main_df = edited_df
 
             # Service Provider Breakdown for PRD and NTC issues
             st.markdown("---")
@@ -1538,8 +1722,14 @@ def render_weekly_report(df):
             # Use edited dataframe for further processing
             current_report_df = st.session_state.edited_action_plan
 
+            # Initialize service provider breakdowns in session state if not exists
+            if 'sp_breakdowns' not in st.session_state:
+                st.session_state.sp_breakdowns = {}
+
             # Check which issues need SP breakdown
             issues_with_breakdown = []
+            temp_sp_edits_local = {}  # Local dictionary to collect SP edits (no state changes)
+
             for idx, row in current_report_df.iterrows():
                 unit = row['unit']
                 issue_name = row['issue']
@@ -1548,32 +1738,68 @@ def render_weekly_report(df):
                 matching_issue = next((i for i in top_issues if i['name'] == issue_name), None)
 
                 if matching_issue and unit in UNITS_REQUIRING_SP_BREAKDOWN:
-                    sp_breakdown = get_service_provider_breakdown(df, issue_name, matching_issue['type'])
+                    # Use cached breakdown if exists, otherwise fetch new
+                    sp_key = f"{issue_name}_{unit}"
+                    if sp_key not in st.session_state.sp_breakdowns:
+                        sp_breakdown = get_service_provider_breakdown(df, issue_name, matching_issue['type'])
+                        if sp_breakdown:
+                            st.session_state.sp_breakdowns[sp_key] = sp_breakdown
+                    else:
+                        sp_breakdown = st.session_state.sp_breakdowns[sp_key]
+
                     if sp_breakdown:
                         issues_with_breakdown.append({
                             "issue": issue_name,
                             "unit": unit,
                             "unit_label": UNITS_REQUIRING_SP_BREAKDOWN[unit],
                             "total_count": matching_issue['count'],
-                            "breakdown": sp_breakdown
+                            "breakdown": sp_breakdown,
+                            "sp_key": sp_key
                         })
 
             if issues_with_breakdown:
-                for item in issues_with_breakdown:
+                st.info("💡 Service Provider tables are also editable. Edit as needed, then use 'Save All Changes' button below.")
+
+                for idx, item in enumerate(issues_with_breakdown):
                     with st.expander(f"{item['issue']} ({item['unit']}) - {item['total_count']} complaints", expanded=True):
-                        # Create breakdown table
+                        # Create editable breakdown table from session state
                         sp_df = pd.DataFrame(item['breakdown'])
 
-                        st.dataframe(
+                        edited_sp_df = st.data_editor(
                             sp_df,
                             column_config={
-                                "provider": st.column_config.TextColumn("Service Provider", width="large"),
-                                "count": st.column_config.NumberColumn("Complaints", format="%d", width="small"),
-                                "percentage": st.column_config.NumberColumn("Percentage", format="%.1f%%", width="small")
+                                "provider": st.column_config.TextColumn(
+                                    "Service Provider",
+                                    width=300,
+                                    disabled=False,
+                                    help="Click to edit provider name"
+                                ),
+                                "count": st.column_config.NumberColumn(
+                                    "Complaints",
+                                    format="%d",
+                                    width=120,
+                                    disabled=False,
+                                    help="Click to edit count"
+                                ),
+                                "percentage": st.column_config.NumberColumn(
+                                    "Percentage",
+                                    format="%.1f%%",
+                                    width=120,
+                                    disabled=False,
+                                    help="Click to edit percentage"
+                                )
                             },
                             hide_index=True,
-                            use_container_width=True
+                            use_container_width=True,
+                            num_rows="fixed",
+                            key=f"sp_breakdown_{idx}",
+                            disabled=False
                         )
+
+                        # Store edits in local dictionary (NO session state update - prevents rerun!)
+                        new_sp_breakdown = edited_sp_df.to_dict('records')
+                        item['breakdown'] = new_sp_breakdown
+                        temp_sp_edits_local[item['sp_key']] = new_sp_breakdown
 
                         # Summary stats
                         st.caption(f"Top Provider: **{item['breakdown'][0]['provider']}** with {item['breakdown'][0]['count']} complaints ({item['breakdown'][0]['percentage']}%)")
@@ -1602,6 +1828,46 @@ def render_weekly_report(df):
                         st.write(f"Complaint distribution for this issue is **{concentration}**, with the leading provider accounting for **{top_provider_pct:.1f}%** of all complaints in this category. {recommendation}")
             else:
                 st.info("No Delivery Concerns or Telecommunications Issues identified in the top 5 priority complaints requiring detailed service provider analysis.")
+
+            st.markdown("---")
+
+            # Save button (after all editable sections)
+            st.markdown("### Save All Changes")
+            col_save1, col_save2, col_save3 = st.columns([1, 1, 1])
+            with col_save2:
+                save_button = st.button(
+                    "💾 Save All Changes",
+                    type="primary",
+                    use_container_width=True,
+                    help="Save edits from main table and service provider tables, then regenerate export files",
+                    key="save_all_changes"
+                )
+
+            # Only process and save when save button is clicked
+            if save_button:
+                # Convert edited main table data back to internal column names
+                temp_edited_main = temp_edited_main_df.rename(columns={
+                    'Top Issue': 'issue',
+                    'Action Plan': 'action_plan',
+                    'Assigned Unit': 'unit',
+                    'Remarks': 'remarks',
+                    'Action Taken by the Unit': 'resolution'
+                })
+
+                # Update session state with main table edits
+                st.session_state.edited_action_plan = temp_edited_main
+
+                # Apply all SP edits to permanent storage
+                for sp_key, sp_data in temp_sp_edits_local.items():
+                    st.session_state.sp_breakdowns[sp_key] = sp_data
+
+                # Mark that export cache needs regeneration
+                st.session_state.data_changed = True
+
+                st.success("✅ All changes saved successfully! Export files will be updated.")
+                st.rerun()
+
+            st.caption("**Note:** Click 'Save All Changes' button above to apply edits and regenerate export files.")
 
             st.markdown("---")
 
