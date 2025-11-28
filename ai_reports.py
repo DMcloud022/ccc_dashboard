@@ -895,12 +895,16 @@ def export_to_pdf(plans_df, top_issues, sp_breakdowns=None):
 
     plan_data = [['Issue', 'Action Plan', 'Assigned Unit', 'Remarks', 'Resolution']]
     for _, row in plans_df.iterrows():
+        # Use actual values from edited data (remarks and resolution may be edited)
+        remarks_text = str(row.get('remarks', '')) if pd.notna(row.get('remarks', '')) else ''
+        resolution_text = str(row.get('resolution', '')) if pd.notna(row.get('resolution', '')) else ''
+
         plan_data.append([
             Paragraph(str(row['issue']), styles['Normal']),
             Paragraph(str(row['action_plan']), styles['Normal']),
             Paragraph(str(row['unit']), styles['Normal']),
-            Paragraph('', styles['Normal']),  # Blank for manual entry
-            Paragraph('', styles['Normal'])   # Blank for manual entry
+            Paragraph(remarks_text, styles['Normal']),
+            Paragraph(resolution_text, styles['Normal'])
         ])
 
     # Landscape A4 width is about 11 inches, minus margins = ~10 inches available
@@ -924,7 +928,7 @@ def export_to_pdf(plans_df, top_issues, sp_breakdowns=None):
 
     elements.append(plan_table)
 
-    # Add note about manual fields
+    # Add note about editable fields
     note_style = ParagraphStyle(
         'Note',
         parent=styles['Normal'],
@@ -935,7 +939,7 @@ def export_to_pdf(plans_df, top_issues, sp_breakdowns=None):
         italic=True
     )
     elements.append(Spacer(1, 0.1*inch))
-    elements.append(Paragraph("Note: Remarks and Resolution fields are provided blank for units to manually update with progress and observations.", note_style))
+    elements.append(Paragraph("Note: This report includes any edits made to the Action Plan, Remarks, and Resolution fields before download.", note_style))
 
     # Service Provider Breakdown Section
     if sp_breakdowns and len(sp_breakdowns) > 0:
@@ -1134,19 +1138,23 @@ def export_to_word(plans_df, top_issues, sp_breakdowns=None):
 
     # Data rows
     for _, row in plans_df.iterrows():
+        # Use actual values from edited data (remarks and resolution may be edited)
+        remarks_text = str(row.get('remarks', '')) if pd.notna(row.get('remarks', '')) else ''
+        resolution_text = str(row.get('resolution', '')) if pd.notna(row.get('resolution', '')) else ''
+
         row_cells = plan_table.add_row().cells
         row_cells[0].text = str(row['issue'])
         row_cells[1].text = str(row['action_plan'])
         row_cells[2].text = str(row['unit'])
-        row_cells[3].text = ''  # Blank for manual entry
-        row_cells[4].text = ''  # Blank for manual entry
+        row_cells[3].text = remarks_text
+        row_cells[4].text = resolution_text
         # Center align the resolution
         if row_cells[4].paragraphs:
             row_cells[4].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-    # Add note about manual fields
+    # Add note about editable fields
     note = doc.add_paragraph()
-    note_run = note.add_run("Note: Remarks and Resolution fields are provided blank for units to manually update with progress and observations.")
+    note_run = note.add_run("Note: This report includes any edits made to the Action Plan, Remarks, and Resolution fields before download.")
     note_run.font.size = Pt(8)
     note_run.font.color.rgb = RGBColor(107, 114, 128)
     note_run.italic = True
@@ -1416,57 +1424,76 @@ def render_weekly_report(df):
         if 'weekly_action_plan' in st.session_state:
             plans = st.session_state.weekly_action_plan
 
-            # Convert to DataFrame
+            # Convert to DataFrame and add editable columns
             report_df = pd.DataFrame(plans)
+
+            # Add Resolution column if it doesn't exist
+            if 'resolution' not in report_df.columns:
+                report_df['resolution'] = ''
+
+            # Rename columns for better display
+            display_df = report_df.rename(columns={
+                'issue': 'Top Issue',
+                'action_plan': 'Action Plan',
+                'unit': 'Assigned Unit',
+                'remarks': 'Remarks',
+                'resolution': 'Resolution'
+            })
 
             st.markdown("<br>", unsafe_allow_html=True)
             st.markdown("---")
             st.markdown("### II. Strategic Action Plan Details")
             st.caption(f"Generated {len(report_df)} strategic recommendations based on analysis of top complaint patterns")
 
-            # Responsive table with horizontal scroll
-            import html
+            # Info box about editing
+            st.info("💡 **You can edit the table below!** Click on any cell in the Action Plan, Remarks, or Resolution columns to modify the content before downloading.")
 
-            # Create HTML table for better responsiveness
-            table_html = '<div class="responsive-table-container">\n'
-            table_html += '<table class="action-plan-table">\n'
-            table_html += '<thead>\n<tr>\n'
-            table_html += '<th class="col-issue">Top Issue</th>\n'
-            table_html += '<th class="col-action">Action Plan</th>\n'
-            table_html += '<th class="col-unit">Assigned Unit</th>\n'
-            table_html += '<th class="col-remarks">Remarks</th>\n'
-            table_html += '<th class="col-resolution">Resolution</th>\n'
-            table_html += '</tr>\n</thead>\n<tbody>\n'
+            # Editable data editor
+            edited_df = st.data_editor(
+                display_df,
+                column_config={
+                    "Top Issue": st.column_config.TextColumn("Top Issue", width="medium", disabled=True),
+                    "Action Plan": st.column_config.TextColumn("Action Plan", width="large", help="Edit action plan as needed"),
+                    "Assigned Unit": st.column_config.TextColumn("Assigned Unit", width="small", disabled=True),
+                    "Remarks": st.column_config.TextColumn("Remarks", width="medium", help="Add implementation remarks"),
+                    "Resolution": st.column_config.TextColumn("Resolution", width="small", help="Update resolution status")
+                },
+                hide_index=True,
+                use_container_width=True,
+                num_rows="fixed",
+                key="action_plan_editor"
+            )
 
-            for _, row in report_df.iterrows():
-                # Escape HTML to prevent rendering issues
-                issue = html.escape(str(row['issue']))
-                action = html.escape(str(row['action_plan']))
-                unit = html.escape(str(row['unit']))
+            # Store edited data in session state for export
+            new_edited_df = edited_df.rename(columns={
+                'Top Issue': 'issue',
+                'Action Plan': 'action_plan',
+                'Assigned Unit': 'unit',
+                'Remarks': 'remarks',
+                'Resolution': 'resolution'
+            })
 
-                table_html += '<tr>\n'
-                table_html += f'<td class="col-issue"><strong>{issue}</strong></td>\n'
-                table_html += f'<td class="col-action">{action}</td>\n'
-                table_html += f'<td class="col-unit">{unit}</td>\n'
-                table_html += f'<td class="col-remarks"></td>\n'
-                table_html += f'<td class="col-resolution"></td>\n'
-                table_html += '</tr>\n'
+            # Check if data actually changed to trigger regeneration
+            if 'edited_action_plan' not in st.session_state or not new_edited_df.equals(st.session_state.get('edited_action_plan', pd.DataFrame())):
+                st.session_state.edited_action_plan = new_edited_df
+                st.session_state.data_changed = True  # Mark for cache invalidation
+            else:
+                st.session_state.data_changed = False
 
-            table_html += '</tbody>\n</table>\n</div>'
-
-            st.markdown(table_html, unsafe_allow_html=True)
-
-            # Add explanatory note for manual fields
-            st.caption("**Note:** Remarks and Resolution fields are provided for units to manually update progress and observations.")
+            # Add explanatory note
+            st.caption("**Note:** Your edits are automatically saved and will be included in downloaded reports.")
 
             # Service Provider Breakdown for PRD and NTC issues
             st.markdown("---")
             st.markdown("### III. Service Provider Analysis")
             st.caption("Detailed breakdown for Delivery Concerns and Telecommunications Issues")
 
+            # Use edited dataframe for further processing
+            current_report_df = st.session_state.edited_action_plan
+
             # Check which issues need SP breakdown
             issues_with_breakdown = []
-            for idx, row in report_df.iterrows():
+            for idx, row in current_report_df.iterrows():
                 unit = row['unit']
                 issue_name = row['issue']
 
@@ -1533,50 +1560,74 @@ def render_weekly_report(df):
 
             # Download Buttons Section
             st.markdown("### IV. Export Options")
-            st.caption("Download the strategic action plan in your preferred format")
+            st.caption("Download the strategic action plan in your preferred format (includes your edits)")
+
+            # Use edited dataframe for exports
+            export_df = st.session_state.edited_action_plan
+
+            # Cache the export data to prevent regeneration on download
+            if 'cached_pdf_buffer' not in st.session_state or st.session_state.get('data_changed', True):
+                try:
+                    st.session_state.cached_pdf_buffer = export_to_pdf(export_df, top_issues, issues_with_breakdown)
+                except Exception as e:
+                    st.session_state.cached_pdf_buffer = None
+                    st.session_state.pdf_error = str(e)
+
+            if 'cached_word_buffer' not in st.session_state or st.session_state.get('data_changed', True):
+                try:
+                    st.session_state.cached_word_buffer = export_to_word(export_df, top_issues, issues_with_breakdown)
+                except Exception as e:
+                    st.session_state.cached_word_buffer = None
+                    st.session_state.word_error = str(e)
+
+            if 'cached_csv_buffer' not in st.session_state or st.session_state.get('data_changed', True):
+                st.session_state.cached_csv_buffer = export_df.to_csv(index=False)
+
+            # Mark data as cached
+            st.session_state.data_changed = False
 
             col_dl1, col_dl2, col_dl3 = st.columns(3)
 
             with col_dl1:
                 # PDF Download
-                try:
-                    pdf_buffer = export_to_pdf(report_df, top_issues, issues_with_breakdown)
+                if st.session_state.cached_pdf_buffer:
                     st.download_button(
-                        label="PDF Document",
-                        data=pdf_buffer,
+                        label="📄 PDF Document",
+                        data=st.session_state.cached_pdf_buffer,
                         file_name=f"DICT_AI_Action_Plan_{datetime.now().strftime('%Y%m%d')}.pdf",
                         mime="application/pdf",
                         use_container_width=True,
-                        help="Download formatted PDF report with service provider analysis"
+                        help="Download formatted PDF report with service provider analysis",
+                        key="download_pdf_btn"
                     )
-                except Exception as e:
-                    st.error(f"PDF Export Error: {str(e)}")
+                else:
+                    st.error(f"PDF Export Error: {st.session_state.get('pdf_error', 'Unknown error')}")
 
             with col_dl2:
                 # Word Download
-                try:
-                    word_buffer = export_to_word(report_df, top_issues, issues_with_breakdown)
+                if st.session_state.cached_word_buffer:
                     st.download_button(
-                        label="Word Document",
-                        data=word_buffer,
+                        label="📝 Word Document",
+                        data=st.session_state.cached_word_buffer,
                         file_name=f"DICT_AI_Action_Plan_{datetime.now().strftime('%Y%m%d')}.docx",
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                         use_container_width=True,
-                        help="Download editable Word document with service provider analysis"
+                        help="Download editable Word document with service provider analysis",
+                        key="download_word_btn"
                     )
-                except Exception as e:
-                    st.error(f"Word Export Error: {str(e)}")
+                else:
+                    st.error(f"Word Export Error: {st.session_state.get('word_error', 'Unknown error')}")
 
             with col_dl3:
                 # CSV Download
-                csv_buffer = report_df.to_csv(index=False)
                 st.download_button(
-                    label="CSV Spreadsheet",
-                    data=csv_buffer,
+                    label="📊 CSV Spreadsheet",
+                    data=st.session_state.cached_csv_buffer,
                     file_name=f"DICT_AI_Action_Plan_{datetime.now().strftime('%Y%m%d')}.csv",
                     mime="text/csv",
                     use_container_width=True,
-                    help="Download data in CSV format"
+                    help="Download data in CSV format",
+                    key="download_csv_btn"
                 )
 
             # Summary Metrics
@@ -1586,11 +1637,11 @@ def render_weekly_report(df):
             m1, m2, m3, m4 = st.columns(4)
 
             total_complaints = sum([i['count'] for i in top_issues])
-            unique_units = report_df['unit'].nunique()
+            unique_units = export_df['unit'].nunique()
 
             m1.metric(
                 label="Issues Analyzed",
-                value=len(report_df),
+                value=len(export_df),
                 help="Number of top issues identified"
             )
             m2.metric(
@@ -1616,7 +1667,7 @@ def render_weekly_report(df):
 
             # Build detailed breakdown with service providers
             unit_details = []
-            for idx, row in report_df.iterrows():
+            for idx, row in export_df.iterrows():
                 unit = row['unit']
                 issue_name = row['issue']
 
