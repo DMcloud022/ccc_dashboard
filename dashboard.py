@@ -689,6 +689,11 @@ def parse_date_robust(date_value):
     if not date_str or date_str.lower() in ['nan', 'none', 'nat', '']:
         return pd.NaT
 
+    # Clean up common timezone typos/artifacts
+    # "APM" is likely a typo for "PM" or "AM" depending on context, but usually PM if it appears at end
+    # We'll replace "APM" with " PM" to be safe
+    date_str = date_str.replace('APM', ' PM').replace('A M', ' AM').replace('P M', ' PM')
+
     try:
         # Try pandas default parser first
         return pd.to_datetime(date_str, errors='coerce')
@@ -726,6 +731,7 @@ def parse_date_robust(date_value):
 
     return pd.NaT
 
+@st.cache_data(show_spinner=False)
 def prepare_data(df):
     """Prepare and clean the data with robust validation and date parsing"""
     if df is None or df.empty:
@@ -1098,6 +1104,8 @@ def main():
         st.session_state.use_public_sheet = True
     if 'view_mode' not in st.session_state:
         st.session_state.view_mode = "Dashboard"
+    if 'last_valid_df' not in st.session_state:
+        st.session_state.last_valid_df = None
 
     # Apply custom CSS styles
     st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
@@ -1210,6 +1218,7 @@ def main():
                 st.session_state.data_source_type = "gsheets_private"
         
         if df is not None and not df.empty:
+            st.session_state.last_valid_df = df
             st.divider()
             
             # Row 2: Refresh Controls
@@ -1234,7 +1243,7 @@ def main():
 
             # Compact Data Preview
             with st.expander("📋 View Data", expanded=False):
-                st.dataframe(df.head(3), use_container_width=True, height=150)
+                st.dataframe(df.head(3), width='stretch', height=150)
 
     # Determine refresh rate for the fragment
     # If data source is uploaded file, auto-refresh is not needed unless explicitly desired (but file won't change)
@@ -1270,9 +1279,22 @@ def main():
         
         # Don't use stale data - if reload fails, show error instead
         # Using old data could mislead users about real-time status
-        if df is None and initial_df is not None and source_type != 'upload':
-            st.warning("⚠️ Unable to refresh data. Please check your connection and data source.")
-            df = initial_df  # Use cached data but warn user
+        # if df is None and initial_df is not None and source_type != 'upload':
+        #    st.warning("⚠️ Unable to refresh data. Please check your connection and data source.")
+        #    df = initial_df  # Use cached data but warn user
+
+        # Update last_valid_df if we got new data
+        if df is not None and not df.empty:
+            st.session_state.last_valid_df = df
+        
+        # Fallback to last_valid_df if current fetch failed
+        if (df is None or df.empty) and st.session_state.last_valid_df is not None:
+            df = st.session_state.last_valid_df
+            
+        # Fallback to initial_df if everything else failed
+        if (df is None or df.empty) and initial_df is not None and not initial_df.empty:
+             df = initial_df
+             st.session_state.last_valid_df = df
 
         if df is None or df.empty:
             st.info("👈 Please load data from the sidebar to begin analysis")

@@ -341,133 +341,36 @@ div[data-testid="stDownloadButton"] > button:hover {
     transform: translateY(-1px);
 }
 
-/* Comprehensive Data Editor Cell Styling - Compact with Proper Text Wrapping */
-
-/* Main container */
+/* Data Editor Styling - Robust & Responsive */
 div[data-testid="stDataFrame"] {
-    font-size: 0.875rem;
-    overflow-x: auto !important;
+    width: 100%;
 }
 
-div[data-testid="stDataFrame"] div[data-testid="stDataFrameResizable"] {
-    min-height: auto !important;
-}
-
-/* Glide Data Editor - Core wrapping fix */
-.glide-data-editor {
-    overflow: visible !important;
-}
-
-.glide-data-editor .dvn-scroller {
-    overflow-x: auto !important;
-    overflow-y: visible !important;
-}
-
-/* All cells - proper wrapping and compact sizing */
-.glide-data-editor .dvn-underlay > div,
-.glide-data-editor .gdg-cell,
-div[data-testid="stDataFrame"] .glide-cell,
-div[data-testid="stDataFrame"] td,
+/* Ensure headers wrap properly */
 div[data-testid="stDataFrame"] th {
-    white-space: pre-wrap !important;
-    word-wrap: break-word !important;
-    overflow-wrap: break-word !important;
-    word-break: break-word !important;
-    line-height: 1.5 !important;
-    padding: 8px 6px !important;
-    vertical-align: top !important;
-    min-height: auto !important;
-    max-height: none !important;
-    height: auto !important;
-    overflow: visible !important;
-}
-
-/* Cell content wrapper */
-.glide-data-editor .gdg-cell > div,
-.glide-data-editor .dvn-underlay > div > div {
-    white-space: pre-wrap !important;
-    word-wrap: break-word !important;
-    overflow-wrap: break-word !important;
-    word-break: break-word !important;
-    max-width: 100% !important;
-    overflow: visible !important;
-    line-height: 1.5 !important;
-}
-
-/* Text content in cells */
-.glide-data-editor .gdg-cell span,
-.glide-data-editor .dvn-underlay span {
-    white-space: pre-wrap !important;
-    word-wrap: break-word !important;
-    overflow-wrap: break-word !important;
-    word-break: break-word !important;
-    display: block !important;
-    line-height: 1.5 !important;
-}
-
-/* Editable text areas and inputs - compact but usable */
-div[data-testid="stDataFrame"] textarea,
-div[data-testid="stDataFrame"] input[type="text"],
-.glide-data-editor textarea,
-.glide-data-editor input[type="text"] {
-    min-height: 80px !important;
-    line-height: 1.5 !important;
-    padding: 8px !important;
-    resize: vertical !important;
-    white-space: pre-wrap !important;
-    word-wrap: break-word !important;
-    overflow-wrap: break-word !important;
-    font-size: 0.875rem !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
-}
-
-/* Prevent cell content overflow */
-.glide-data-editor .gdg-cell,
-.glide-data-editor .dvn-underlay > div {
-    overflow: visible !important;
-    text-overflow: clip !important;
-}
-
-/* Column headers - compact */
-.glide-data-editor .gdg-header-cell {
     white-space: normal !important;
+    vertical-align: top !important;
+    padding: 8px !important;
+    line-height: 1.4 !important;
+}
+
+/* Ensure cell content wraps and aligns properly */
+div[data-testid="stDataFrame"] td {
+    vertical-align: top !important;
+}
+
+/* Target the cell content div for wrapping */
+div[data-testid="stDataFrame"] td div {
+    white-space: pre-wrap !important;
     word-wrap: break-word !important;
-    padding: 8px 6px !important;
+    overflow-wrap: break-word !important;
+    line-height: 1.5 !important;
+    max-height: none !important;
 }
 
-/* Ensure rows expand to fit content but start compact */
-.glide-data-editor .gdg-row {
-    min-height: auto !important;
-    height: auto !important;
-}
-
-/* Fix for data grid canvas - compact */
-.glide-data-editor canvas {
-    min-height: auto !important;
-}
-
-/* Prevent table overflow and ensure proper scrolling */
-div[data-testid="stDataFrame"] > div {
-    overflow-x: auto !important;
-    overflow-y: visible !important;
-}
-
-/* Ensure proper spacing between rows - compact */
-.glide-data-editor .gdg-growing-entry {
-    min-height: auto !important;
-    overflow: visible !important;
-}
-
-/* Fix cell overlay positioning */
-.glide-data-editor .gdg-overlay {
-    overflow: visible !important;
-}
-
-/* Ensure edit overlay expands properly - compact */
-.glide-data-editor .gdg-edit-overlay {
-    min-height: 80px !important;
-    overflow: visible !important;
+/* Fix for Glide Data Grid (if used by Streamlit version) */
+.glide-data-editor {
+    font-family: 'Inter', sans-serif;
 }
 </style>
 """
@@ -537,6 +440,7 @@ def categorize_issue_to_unit(issue_name, issue_type="Category"):
     # Default fallback for unmatched issues
     return "CICC", "Cybersecurity Investigation and Coordinating Center", "Attached Agency"
 
+@st.cache_resource(show_spinner=False)
 def init_vertex_ai():
     """Initialize Vertex AI with error handling"""
     try:
@@ -615,6 +519,7 @@ def get_service_provider_breakdown(df, issue_name, issue_type):
 
     return breakdown[:5]  # Return only top 5 service providers
 
+@st.cache_data
 def get_top_issues(df):
     """Extract top 5 issues based on Category and Nature
 
@@ -949,6 +854,46 @@ DICT ORGANIZATIONAL STRUCTURE - UNIT ASSIGNMENT GUIDE WITH ACTION PLAN TEMPLATES
 
         return fallback_plans
 
+def generate_executive_summary(plans_data):
+    """Generate an executive summary using AI based on the action plans"""
+    try:
+        llm_model = os.getenv("LLM_MODEL", "gemini-1.5-flash-001")
+        model = GenerativeModel(llm_model)
+        
+        prompt = f"""
+        You are a senior strategic analyst for the DICT. Based on the following Action Plans, generate a professional Executive Summary.
+        
+        Action Plans:
+        {json.dumps(plans_data, indent=2)}
+        
+        Requirements:
+        1. Write a main paragraph summarizing the overall situation (total complaints, top critical issues).
+        2. Write separate short paragraphs for each Organization Type present in the data (e.g., "DICT Delivery Units", "Attached Agencies", "External Agencies").
+        3. For each organization type, summarize the key issues and the planned interventions.
+        4. Keep it concise, professional, and action-oriented.
+        5. Do not use bullet points, use paragraphs.
+        
+        Output Format:
+        Return a JSON object with the following keys:
+        - "main_summary": The overall summary paragraph.
+        - "org_summaries": A dictionary where keys are Organization Types (e.g. "Delivery Unit (DICT Internal)", "Attached Agency", "External Agency") and values are the summary paragraphs.
+        """
+        
+        response = model.generate_content(prompt)
+        text = response.text.strip()
+        if text.startswith("```json"):
+            text = text[7:]
+        if text.endswith("```"):
+            text = text[:-3]
+        text = text.strip()
+        
+        return json.loads(text)
+    except Exception as e:
+        return {
+            "main_summary": "Summary generation unavailable.",
+            "org_summaries": {}
+        }
+
 def export_to_pdf(plans_df, top_issues, sp_breakdowns=None):
     """Generate PDF report with service provider breakdowns
 
@@ -1079,7 +1024,25 @@ def export_to_pdf(plans_df, top_issues, sp_breakdowns=None):
     elements.append(Paragraph(action_plan_narrative, body_style))
     elements.append(Spacer(1, 0.15*inch))
 
-    plan_data = [['Issue', 'Action Plan', 'Assigned Unit', 'Remarks', 'Action Taken by the Unit']]
+    # Define header style for table
+    header_style = ParagraphStyle(
+        'HeaderStyle',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=10,
+        textColor=colors.whitesmoke,
+        alignment=TA_LEFT
+    )
+
+    # Use Paragraph for headers to ensure wrapping and prevent overlap
+    plan_data = [[
+        Paragraph('Issue', header_style),
+        Paragraph('Action Plan', header_style),
+        Paragraph('Assigned Unit', header_style),
+        Paragraph('Remarks', header_style),
+        Paragraph('Action Taken', header_style)
+    ]]
+    
     for _, row in plans_df.iterrows():
         # Use actual values from edited data (remarks and resolution may be edited)
         remarks_text = str(row.get('remarks', '')) if pd.notna(row.get('remarks', '')) else ''
@@ -1094,15 +1057,17 @@ def export_to_pdf(plans_df, top_issues, sp_breakdowns=None):
         ])
 
     # Landscape A4 width is about 11 inches, minus margins = ~10 inches available
-    plan_table = Table(plan_data, colWidths=[2.0*inch, 3.5*inch, 1.3*inch, 2.0*inch, 1.2*inch])
+    # Adjusted column widths to prevent overlap and improve readability
+    # Issue: 1.5, Action Plan: 3.8, Unit: 1.0, Remarks: 2.5, Action Taken: 1.5 = 10.3 inches
+    col_widths = [1.5*inch, 3.8*inch, 1.0*inch, 2.5*inch, 1.5*inch]
+    
+    plan_table = Table(plan_data, colWidths=col_widths)
     plan_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#3b82f6')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('ALIGN', (4, 0), (4, -1), 'CENTER'),  # Center align Resolution column
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        # Remove direct font settings for header row as we use Paragraph now
         ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
         ('TOPPADDING', (0, 0), (-1, 0), 12),
         ('BACKGROUND', (0, 1), (-1, -1), colors.white),
@@ -1577,12 +1542,20 @@ def render_weekly_report(df):
     col_spacer1, col_btn, col_spacer2 = st.columns([1, 2, 1])
 
     with col_btn:
-        generate_button = st.button(
-            "Generate Strategic Action Plan",
-            type="primary",
-            use_container_width=True,
-            help="Analyze top complaints and generate strategic action plans"
-        )
+        if st.session_state.get('report_generated', False):
+            generate_button = st.button(
+                "🔄 Regenerate Strategic Action Plan",
+                type="secondary",
+                use_container_width=True,
+                help="Re-analyze top complaints and regenerate strategic action plans"
+            )
+        else:
+            generate_button = st.button(
+                "Generate Strategic Action Plan",
+                type="primary",
+                use_container_width=True,
+                help="Analyze top complaints and generate strategic action plans"
+            )
 
     # Handle generation
     if generate_button or ('weekly_action_plan' in st.session_state and st.session_state.get('report_generated', False)):
@@ -1590,6 +1563,8 @@ def render_weekly_report(df):
             with st.spinner("Analyzing complaint data and generating strategic action plans..."):
                 if is_init:
                     action_plan_data = generate_ai_action_plan(top_issues, df)  # Pass df for SP analysis
+                    # Generate Executive Summary
+                    summary_data = generate_executive_summary(action_plan_data)
                 else:
                     # Fallback if no AI - generate concise action plans with minimal data-driven remarks
                     action_plan_data = []
@@ -1606,7 +1581,10 @@ def render_weekly_report(df):
                             "unit": unit_code,
                             "remarks": remarks
                         })
+                    summary_data = {"main_summary": "AI features unavailable.", "org_summaries": {}}
+
                 st.session_state.weekly_action_plan = action_plan_data
+                st.session_state.executive_summary = summary_data
                 st.session_state.report_generated = True
                 st.session_state.report_timestamp = datetime.now()
                 st.success("Action plan generated successfully.")
@@ -1670,178 +1648,181 @@ def render_weekly_report(df):
                 'resolution': 'Action Taken by the Unit'
             })
 
-            # Editable data editor - ALL fields are editable with proper wrapping
-            edited_df = st.data_editor(
-                display_df_for_editor,
-                column_config={
-                    "Top Issue": st.column_config.TextColumn(
-                        "Top Issue",
-                        width=200,
-                        disabled=False,
-                        help="Click to edit issue name"
-                    ),
-                    "Action Plan": st.column_config.TextColumn(
-                        "Action Plan",
-                        width=400,
-                        disabled=False,
-                        help="Click to edit the action plan"
-                    ),
-                    "Assigned Unit": st.column_config.TextColumn(
-                        "Assigned Unit",
-                        width=120,
-                        disabled=False,
-                        help="Click to change assigned unit"
-                    ),
-                    "Remarks": st.column_config.TextColumn(
-                        "Remarks",
-                        width=300,
-                        disabled=False,
-                        help="Click to add or edit remarks"
-                    ),
-                    "Action Taken by the Unit": st.column_config.TextColumn(
-                        "Action Taken by the Unit",
-                        width=250,
-                        disabled=False,
-                        help="Click to update actions taken"
-                    )
-                },
-                hide_index=True,
-                use_container_width=True,
-                num_rows="fixed",
-                key="action_plan_editor"
-            )
-
-            # Store edited main table temporarily (local variable only - no state change)
-            temp_edited_main_df = edited_df
-
-            # Service Provider Breakdown for PRD and NTC issues
-            st.markdown("---")
-            st.markdown("### III. Service Provider Analysis")
-            st.caption("Detailed breakdown for Delivery Concerns and Telecommunications Issues")
-
-            # Use edited dataframe for further processing
-            current_report_df = st.session_state.edited_action_plan
-
-            # Initialize service provider breakdowns in session state if not exists
-            if 'sp_breakdowns' not in st.session_state:
-                st.session_state.sp_breakdowns = {}
-
-            # Check which issues need SP breakdown
-            issues_with_breakdown = []
-            temp_sp_edits_local = {}  # Local dictionary to collect SP edits (no state changes)
-
-            for idx, row in current_report_df.iterrows():
-                unit = row['unit']
-                issue_name = row['issue']
-
-                # Find matching issue from top_issues
-                matching_issue = next((i for i in top_issues if i['name'] == issue_name), None)
-
-                if matching_issue and unit in UNITS_REQUIRING_SP_BREAKDOWN:
-                    # Use cached breakdown if exists, otherwise fetch new
-                    sp_key = f"{issue_name}_{unit}"
-                    if sp_key not in st.session_state.sp_breakdowns:
-                        sp_breakdown = get_service_provider_breakdown(df, issue_name, matching_issue['type'])
-                        if sp_breakdown:
-                            st.session_state.sp_breakdowns[sp_key] = sp_breakdown
-                    else:
-                        sp_breakdown = st.session_state.sp_breakdowns[sp_key]
-
-                    if sp_breakdown:
-                        issues_with_breakdown.append({
-                            "issue": issue_name,
-                            "unit": unit,
-                            "unit_label": UNITS_REQUIRING_SP_BREAKDOWN[unit],
-                            "total_count": matching_issue['count'],
-                            "breakdown": sp_breakdown,
-                            "sp_key": sp_key
-                        })
-
-            if issues_with_breakdown:
-                st.info("💡 Service Provider tables are also editable. Edit as needed, then use 'Save All Changes' button below.")
-
-                for idx, item in enumerate(issues_with_breakdown):
-                    with st.expander(f"{item['issue']} ({item['unit']}) - {item['total_count']} complaints", expanded=True):
-                        # Create editable breakdown table from session state
-                        sp_df = pd.DataFrame(item['breakdown'])
-
-                        edited_sp_df = st.data_editor(
-                            sp_df,
-                            column_config={
-                                "provider": st.column_config.TextColumn(
-                                    "Service Provider",
-                                    width=300,
-                                    disabled=False,
-                                    help="Click to edit provider name"
-                                ),
-                                "count": st.column_config.NumberColumn(
-                                    "Complaints",
-                                    format="%d",
-                                    width=120,
-                                    disabled=False,
-                                    help="Click to edit count"
-                                ),
-                                "percentage": st.column_config.NumberColumn(
-                                    "Percentage",
-                                    format="%.1f%%",
-                                    width=120,
-                                    disabled=False,
-                                    help="Click to edit percentage"
-                                )
-                            },
-                            hide_index=True,
-                            use_container_width=True,
-                            num_rows="fixed",
-                            key=f"sp_breakdown_{idx}",
-                            disabled=False
+            # WRAP IN FORM TO PREVENT RELOAD ON EDIT
+            with st.form("ai_report_edit_form"):
+                # Editable data editor - ALL fields are editable with proper wrapping
+                edited_df = st.data_editor(
+                    display_df_for_editor,
+                    column_config={
+                        "Top Issue": st.column_config.TextColumn(
+                            "Top Issue",
+                            width=180,
+                            disabled=False,
+                            help="Click to edit issue name"
+                        ),
+                        "Action Plan": st.column_config.TextColumn(
+                            "Action Plan",
+                            width=400,
+                            disabled=False,
+                            help="Click to edit the action plan"
+                        ),
+                        "Assigned Unit": st.column_config.TextColumn(
+                            "Assigned Unit",
+                            width=100,
+                            disabled=False,
+                            help="Click to change assigned unit"
+                        ),
+                        "Remarks": st.column_config.TextColumn(
+                            "Remarks",
+                            width=250,
+                            disabled=False,
+                            help="Click to add or edit remarks"
+                        ),
+                        "Action Taken by the Unit": st.column_config.TextColumn(
+                            "Action Taken by the Unit",
+                            width=200,
+                            disabled=False,
+                            help="Click to update actions taken"
                         )
-
-                        # Store edits in local dictionary (NO session state update - prevents rerun!)
-                        new_sp_breakdown = edited_sp_df.to_dict('records')
-                        item['breakdown'] = new_sp_breakdown
-                        temp_sp_edits_local[item['sp_key']] = new_sp_breakdown
-
-                        # Summary stats
-                        st.caption(f"Top Provider: **{item['breakdown'][0]['provider']}** with {item['breakdown'][0]['count']} complaints ({item['breakdown'][0]['percentage']}%)")
-                        st.caption(f"Total Providers Identified: {len(item['breakdown'])}")
-
-                        # Add concise explanation
-                        st.markdown("---")
-                        st.markdown("**Analysis and Recommendations:**")
-
-                        # Calculate insights
-                        top_provider = item['breakdown'][0]
-                        top_provider_pct = top_provider['percentage']
-                        num_providers = len(item['breakdown'])
-
-                        # Generate contextual explanation based on the data
-                        if top_provider_pct > 50:
-                            concentration = "highly concentrated"
-                            recommendation = f"Focus immediate attention on **{top_provider['provider']}** as they account for the majority of issues. Consider escalating to their management team."
-                        elif top_provider_pct > 30:
-                            concentration = "moderately concentrated"
-                            recommendation = f"Prioritize **{top_provider['provider']}** while monitoring other providers. A targeted intervention could significantly reduce complaints."
-                        else:
-                            concentration = "distributed across multiple providers"
-                            recommendation = f"Issues are spread across {num_providers} providers. Consider a broader systemic approach rather than targeting individual providers."
-
-                        st.write(f"Complaint distribution for this issue is **{concentration}**, with the leading provider accounting for **{top_provider_pct:.1f}%** of all complaints in this category. {recommendation}")
-            else:
-                st.info("No Delivery Concerns or Telecommunications Issues identified in the top 5 priority complaints requiring detailed service provider analysis.")
-
-            st.markdown("---")
-
-            # Save button (after all editable sections)
-            st.markdown("### Save All Changes")
-            col_save1, col_save2, col_save3 = st.columns([1, 1, 1])
-            with col_save2:
-                save_button = st.button(
-                    "💾 Save All Changes",
-                    type="primary",
+                    },
+                    hide_index=True,
                     use_container_width=True,
-                    help="Save edits from main table and service provider tables, then regenerate export files",
-                    key="save_all_changes"
+                    num_rows="fixed",
+                    key="action_plan_editor"
                 )
+
+                # Store edited main table temporarily (local variable only - no state change)
+                temp_edited_main_df = edited_df
+
+                # Service Provider Breakdown for PRD and NTC issues
+                st.markdown("---")
+                st.markdown("### III. Service Provider Analysis")
+                st.caption("Detailed breakdown for Delivery Concerns and Telecommunications Issues")
+
+                # Use edited dataframe for further processing
+                current_report_df = st.session_state.edited_action_plan
+
+                # Initialize service provider breakdowns in session state if not exists
+                if 'sp_breakdowns' not in st.session_state:
+                    st.session_state.sp_breakdowns = {}
+
+                # Check which issues need SP breakdown
+                issues_with_breakdown = []
+                temp_sp_edits_local = {}  # Local dictionary to collect SP edits (no state changes)
+
+                for idx, row in current_report_df.iterrows():
+                    unit = row['unit']
+                    issue_name = row['issue']
+
+                    # Find matching issue from top_issues
+                    matching_issue = next((i for i in top_issues if i['name'] == issue_name), None)
+
+                    if matching_issue and unit in UNITS_REQUIRING_SP_BREAKDOWN:
+                        # Use cached breakdown if exists, otherwise fetch new
+                        sp_key = f"{issue_name}_{unit}"
+                        if sp_key not in st.session_state.sp_breakdowns:
+                            sp_breakdown = get_service_provider_breakdown(df, issue_name, matching_issue['type'])
+                            if sp_breakdown:
+                                st.session_state.sp_breakdowns[sp_key] = sp_breakdown
+                        else:
+                            sp_breakdown = st.session_state.sp_breakdowns[sp_key]
+
+                        if sp_breakdown:
+                            issues_with_breakdown.append({
+                                "issue": issue_name,
+                                "unit": unit,
+                                "unit_label": UNITS_REQUIRING_SP_BREAKDOWN[unit],
+                                "total_count": matching_issue['count'],
+                                "breakdown": sp_breakdown,
+                                "sp_key": sp_key
+                            })
+
+               
+
+                if issues_with_breakdown:
+                    st.info("💡 Service Provider tables are also editable. Edit as needed, then use 'Save All Changes' button below.")
+
+                    for idx, item in enumerate(issues_with_breakdown):
+                        with st.expander(f"{item['issue']} ({item['unit']}) - {item['total_count']} complaints", expanded=True):
+                            # Create editable breakdown table from session state
+                            sp_df = pd.DataFrame(item['breakdown'])
+
+                            edited_sp_df = st.data_editor(
+                                sp_df,
+                                column_config={
+                                    "provider": st.column_config.TextColumn(
+                                        "Service Provider",
+                                        width=300,
+                                        disabled=False,
+                                        help="Click to edit provider name"
+                                    ),
+                                    "count": st.column_config.NumberColumn(
+                                        "Complaints",
+                                        format="%d",
+                                        width=120,
+                                        disabled=False,
+                                        help="Click to edit count"
+                                    ),
+                                    "percentage": st.column_config.NumberColumn(
+                                        "Percentage",
+                                        format="%.1f%%",
+                                        width=120,
+                                        disabled=False,
+                                        help="Click to edit percentage"
+                                    )
+                                },
+                                hide_index=True,
+                                use_container_width=True,
+                                num_rows="fixed",
+                                key=f"sp_breakdown_{idx}",
+                                disabled=False
+                            )
+
+                            # Store edits in local dictionary (NO session state update - prevents rerun!)
+                            new_sp_breakdown = edited_sp_df.to_dict('records')
+                            item['breakdown'] = new_sp_breakdown
+                            temp_sp_edits_local[item['sp_key']] = new_sp_breakdown
+
+                            # Summary stats
+                            st.caption(f"Top Provider: **{item['breakdown'][0]['provider']}** with {item['breakdown'][0]['count']} complaints ({item['breakdown'][0]['percentage']}%)")
+                            st.caption(f"Total Providers Identified: {len(item['breakdown'])}")
+
+                            # Add concise explanation
+                            st.markdown("---")
+                            st.markdown("**Analysis and Recommendations:**")
+
+                            # Calculate insights
+                            top_provider = item['breakdown'][0]
+                            top_provider_pct = top_provider['percentage']
+                            num_providers = len(item['breakdown'])
+
+                            # Generate contextual explanation based on the data
+                            if top_provider_pct > 50:
+                                concentration = "highly concentrated"
+                                recommendation = f"Focus immediate attention on **{top_provider['provider']}** as they account for the majority of issues. Consider escalating to their management team."
+                            elif top_provider_pct > 30:
+                                concentration = "moderately concentrated"
+                                recommendation = f"Prioritize **{top_provider['provider']}** while monitoring other providers. A targeted intervention could significantly reduce complaints."
+                            else:
+                                concentration = "distributed across multiple providers"
+                                recommendation = f"Issues are spread across {num_providers} providers. Consider a broader systemic approach rather than targeting individual providers."
+
+                            st.write(f"Complaint distribution for this issue is **{concentration}**, with the leading provider accounting for **{top_provider_pct:.1f}%** of all complaints in this category. {recommendation}")
+                else:
+                    st.info("No Delivery Concerns or Telecommunications Issues identified in the top 5 priority complaints requiring detailed service provider analysis.")
+
+                st.markdown("---")
+
+                # Save button (after all editable sections)
+                st.markdown("### Save All Changes")
+                col_save1, col_save2, col_save3 = st.columns([1, 1, 1])
+                with col_save2:
+                    save_button = st.form_submit_button(
+                        "💾 Save All Changes",
+                        type="primary",
+                        use_container_width=True,
+                        help="Save edits from main table and service provider tables, then regenerate export files"
+                    )
 
             # Only process and save when save button is clicked
             if save_button:
@@ -1953,33 +1934,18 @@ def render_weekly_report(df):
 
             # Summary Metrics
             st.markdown("---")
-            st.markdown("### V. Report Summary")
-
-            m1, m2, m3, m4 = st.columns(4)
-
-            total_complaints = sum([i['count'] for i in top_issues])
-            unique_units = export_df['unit'].nunique()
-
-            m1.metric(
-                label="Issues Analyzed",
-                value=len(export_df),
-                help="Number of top issues identified"
-            )
-            m2.metric(
-                label="Total Complaints",
-                value=f"{total_complaints:,}",
-                help="Total complaints covered by action plans"
-            )
-            m3.metric(
-                label="Units Assigned",
-                value=unique_units,
-                help="Number of DICT units involved"
-            )
-            m4.metric(
-                label="Coverage",
-                value=f"{(total_complaints / len(df) * 100):.1f}%",
-                help="Percentage of total complaints addressed"
-            )
+            st.markdown("### V. Executive Summary")
+            
+            if 'executive_summary' in st.session_state:
+                st.markdown(f"""
+                <div style="background-color: #f8fafc; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #3b82f6; margin-bottom: 1rem;">
+                    <p style="font-size: 1.05rem; line-height: 1.6; color: #1f2937; margin: 0;">
+                        {st.session_state.executive_summary.get('main_summary', 'Summary unavailable.')}
+                    </p>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.info("Executive summary not available.")
 
             # Unit Distribution Analysis with Specific Details
             st.markdown("---")
@@ -2046,41 +2012,42 @@ def render_weekly_report(df):
 
             # Summary by category
             st.markdown("#### A. Summary by Organization Type")
-            col_sum1, col_sum2, col_sum3 = st.columns(3)
-
-            delivery_units = [d for d in unit_details if d['Category'] == "Delivery Unit (DICT)"]
-            attached_units = [d for d in unit_details if d['Category'] == "Attached Agency"]
-            external_units = [d for d in unit_details if d['Category'] == "External Agency"]
-
-            with col_sum1:
-                st.metric(
-                    label="DICT Delivery Units",
-                    value=len(delivery_units),
-                    help="Internal DICT units"
-                )
-                if delivery_units:
-                    unique_delivery = list(set([d['Unit Code'] for d in delivery_units]))
-                    st.caption(f"Units: {', '.join(unique_delivery)}")
-
-            with col_sum2:
-                st.metric(
-                    label="Attached Agencies",
-                    value=len(attached_units),
-                    help="Agencies under DICT"
-                )
-                if attached_units:
-                    unique_attached = list(set([d['Unit Code'] for d in attached_units]))
-                    st.caption(f"Agencies: {', '.join(unique_attached)}")
-
-            with col_sum3:
-                st.metric(
-                    label="External Agencies",
-                    value=len(external_units),
-                    help="Partner agencies"
-                )
-                if external_units:
-                    unique_external = list(set([d['Unit Code'] for d in external_units]))
-                    st.caption(f"Agencies: {', '.join(unique_external)}")
+            
+            if 'executive_summary' in st.session_state:
+                org_summaries = st.session_state.executive_summary.get('org_summaries', {})
+                
+                # Display summaries for each category if available
+                # Map the keys returned by AI to our display titles
+                # AI Prompt asked for: "Delivery Unit (DICT Internal)", "Attached Agency", "External Agency"
+                
+                categories = [
+                    ("DICT Delivery Units", ["Delivery Unit", "DICT Internal", "Delivery Unit (DICT Internal)"]),
+                    ("Attached Agencies", ["Attached Agency", "Attached Agencies"]),
+                    ("External Agencies", ["External Agency", "External Agencies"])
+                ]
+                
+                has_summary = False
+                for title, keys in categories:
+                    summary_text = None
+                    # Find matching summary
+                    for k, v in org_summaries.items():
+                        if any(key_part.lower() in k.lower() for key_part in keys):
+                            summary_text = v
+                            break
+                    
+                    if summary_text:
+                        has_summary = True
+                        st.markdown(f"**{title}**")
+                        st.markdown(f"""
+                        <div style="background-color: #f9fafb; padding: 1rem; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 0.75rem;">
+                            <p style="font-size: 0.95rem; color: #374151; margin: 0;">{summary_text}</p>
+                        </div>
+                        """, unsafe_allow_html=True)
+                
+                if not has_summary:
+                    st.info("No specific organization summaries generated.")
+            else:
+                st.info("Organization summaries not available.")
 
             # Validation status
             unclassified = [d for d in unit_details if d['Category'] == "Unclassified"]
@@ -2090,8 +2057,3 @@ def render_weekly_report(df):
                     st.caption(f"• {item['Unit Code']} - {item['Issue']}")
             else:
                 st.success("All issues successfully categorized to appropriate units and agencies")
-
-    else:
-        # Show placeholder when no report is generated
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.info("Click the **Generate Strategic Action Plan** button above to analyze your complaint data and create strategic recommendations.")
