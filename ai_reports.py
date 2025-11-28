@@ -691,14 +691,42 @@ DICT ORGANIZATIONAL STRUCTURE - UNIT ASSIGNMENT GUIDE WITH ACTION PLAN TEMPLATES
             text = text[:-3]
         text = text.strip()
 
+        # Validate JSON before parsing
+        if not text:
+            raise ValueError("AI returned empty response")
+
         ai_plans = json.loads(text)
+
+        # Validate that response is a list
+        if not isinstance(ai_plans, list):
+            raise ValueError("AI response is not a list of action plans")
 
         # Validate and correct unit assignments
         validated_plans = []
         for i, plan in enumerate(ai_plans):
+            # Ensure plan is a dictionary
+            if not isinstance(plan, dict):
+                continue
+
+            # Validate required fields exist
+            if 'issue' not in plan or 'action_plan' not in plan or 'unit' not in plan:
+                # Use enriched issue data if AI response is incomplete
+                if i < len(enriched_issues):
+                    plan = {
+                        "issue": enriched_issues[i]["name"],
+                        "action_plan": plan.get("action_plan", "Review and address complaints"),
+                        "unit": enriched_issues[i]["recommended_unit"],
+                        "remarks": ""
+                    }
+
             # Use the pre-categorized unit if AI didn't assign correctly
             if plan.get("unit") not in DICT_UNIT_MAPPING:
-                plan["unit"] = enriched_issues[i]["recommended_unit"]
+                if i < len(enriched_issues):
+                    plan["unit"] = enriched_issues[i]["recommended_unit"]
+
+            # Ensure remarks field exists
+            if "remarks" not in plan:
+                plan["remarks"] = ""
 
             validated_plans.append(plan)
 
@@ -1424,8 +1452,18 @@ def render_weekly_report(df):
         if 'weekly_action_plan' in st.session_state:
             plans = st.session_state.weekly_action_plan
 
+            # Validate plans data
+            if not plans or len(plans) == 0:
+                st.warning("No action plans were generated. Please try again.")
+                return
+
             # Convert to DataFrame and add editable columns
             report_df = pd.DataFrame(plans)
+
+            # Validate dataframe is not empty
+            if report_df.empty:
+                st.warning("Action plan data is empty. Please regenerate the report.")
+                return
 
             # Add Resolution column if it doesn't exist
             if 'resolution' not in report_df.columns:
@@ -1474,11 +1512,20 @@ def render_weekly_report(df):
             })
 
             # Check if data actually changed to trigger regeneration
-            if 'edited_action_plan' not in st.session_state or not new_edited_df.equals(st.session_state.get('edited_action_plan', pd.DataFrame())):
-                st.session_state.edited_action_plan = new_edited_df
-                st.session_state.data_changed = True  # Mark for cache invalidation
-            else:
-                st.session_state.data_changed = False
+            # Use try-except to handle edge cases with dataframe comparison
+            data_has_changed = True
+            try:
+                if 'edited_action_plan' in st.session_state:
+                    old_df = st.session_state.edited_action_plan
+                    # Compare dataframes safely
+                    if isinstance(old_df, pd.DataFrame) and not old_df.empty and new_edited_df.equals(old_df):
+                        data_has_changed = False
+            except Exception:
+                # If comparison fails, assume data changed
+                data_has_changed = True
+
+            st.session_state.edited_action_plan = new_edited_df
+            st.session_state.data_changed = data_has_changed
 
             # Add explanatory note
             st.caption("**Note:** Your edits are automatically saved and will be included in downloaded reports.")
@@ -1562,26 +1609,34 @@ def render_weekly_report(df):
             st.markdown("### IV. Export Options")
             st.caption("Download the strategic action plan in your preferred format (includes your edits)")
 
-            # Use edited dataframe for exports
+            # Use edited dataframe for exports (with safety check)
+            if 'edited_action_plan' not in st.session_state:
+                st.error("No action plan data available for export. Please generate the report first.")
+                return
+
             export_df = st.session_state.edited_action_plan
 
-            # Cache the export data to prevent regeneration on download
-            if 'cached_pdf_buffer' not in st.session_state or st.session_state.get('data_changed', True):
+            # Cache the export data as bytes to prevent regeneration on download
+            if 'cached_pdf_bytes' not in st.session_state or st.session_state.get('data_changed', True):
                 try:
-                    st.session_state.cached_pdf_buffer = export_to_pdf(export_df, top_issues, issues_with_breakdown)
+                    pdf_buffer = export_to_pdf(export_df, top_issues, issues_with_breakdown)
+                    st.session_state.cached_pdf_bytes = pdf_buffer.getvalue()  # Store as bytes
+                    st.session_state.pdf_error = None
                 except Exception as e:
-                    st.session_state.cached_pdf_buffer = None
+                    st.session_state.cached_pdf_bytes = None
                     st.session_state.pdf_error = str(e)
 
-            if 'cached_word_buffer' not in st.session_state or st.session_state.get('data_changed', True):
+            if 'cached_word_bytes' not in st.session_state or st.session_state.get('data_changed', True):
                 try:
-                    st.session_state.cached_word_buffer = export_to_word(export_df, top_issues, issues_with_breakdown)
+                    word_buffer = export_to_word(export_df, top_issues, issues_with_breakdown)
+                    st.session_state.cached_word_bytes = word_buffer.getvalue()  # Store as bytes
+                    st.session_state.word_error = None
                 except Exception as e:
-                    st.session_state.cached_word_buffer = None
+                    st.session_state.cached_word_bytes = None
                     st.session_state.word_error = str(e)
 
-            if 'cached_csv_buffer' not in st.session_state or st.session_state.get('data_changed', True):
-                st.session_state.cached_csv_buffer = export_df.to_csv(index=False)
+            if 'cached_csv_string' not in st.session_state or st.session_state.get('data_changed', True):
+                st.session_state.cached_csv_string = export_df.to_csv(index=False)
 
             # Mark data as cached
             st.session_state.data_changed = False
@@ -1590,10 +1645,10 @@ def render_weekly_report(df):
 
             with col_dl1:
                 # PDF Download
-                if st.session_state.cached_pdf_buffer:
+                if st.session_state.cached_pdf_bytes:
                     st.download_button(
                         label="📄 PDF Document",
-                        data=st.session_state.cached_pdf_buffer,
+                        data=st.session_state.cached_pdf_bytes,
                         file_name=f"DICT_AI_Action_Plan_{datetime.now().strftime('%Y%m%d')}.pdf",
                         mime="application/pdf",
                         use_container_width=True,
@@ -1605,10 +1660,10 @@ def render_weekly_report(df):
 
             with col_dl2:
                 # Word Download
-                if st.session_state.cached_word_buffer:
+                if st.session_state.cached_word_bytes:
                     st.download_button(
                         label="📝 Word Document",
-                        data=st.session_state.cached_word_buffer,
+                        data=st.session_state.cached_word_bytes,
                         file_name=f"DICT_AI_Action_Plan_{datetime.now().strftime('%Y%m%d')}.docx",
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                         use_container_width=True,
@@ -1622,7 +1677,7 @@ def render_weekly_report(df):
                 # CSV Download
                 st.download_button(
                     label="📊 CSV Spreadsheet",
-                    data=st.session_state.cached_csv_buffer,
+                    data=st.session_state.cached_csv_string,
                     file_name=f"DICT_AI_Action_Plan_{datetime.now().strftime('%Y%m%d')}.csv",
                     mime="text/csv",
                     use_container_width=True,
