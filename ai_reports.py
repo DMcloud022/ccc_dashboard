@@ -24,6 +24,7 @@ This module is imported by dashboard.py and called in the AI Action Plan tab.
 
 import streamlit as st
 import pandas as pd
+import plotly.express as px
 import vertexai
 from vertexai.generative_models import GenerativeModel
 import google.auth
@@ -43,6 +44,228 @@ from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 load_dotenv()
+
+def clear_ai_report_state():
+    """Clear the generated AI report state to force regeneration"""
+    if 'report_generated' in st.session_state:
+        st.session_state.report_generated = False
+    if 'weekly_action_plan' in st.session_state:
+        del st.session_state.weekly_action_plan
+    if 'executive_summary' in st.session_state:
+        del st.session_state.executive_summary
+    if 'edited_action_plan' in st.session_state:
+        del st.session_state.edited_action_plan
+    if 'sp_breakdowns' in st.session_state:
+        del st.session_state.sp_breakdowns
+
+# PEMEDES Service Providers List (Copied from dashboard.py for consistency)
+PEMEDES_PROVIDERS = [
+    "2GO Express, Inc.",
+    "Sky Express",
+    "3PL Service Provider Philippines, Inc.",
+    "AAI Logistics Cargo Express d.b.a. Black Arrow",
+    "A-Best Express, Inc.",
+    "ACE-REM Messengerial and General Services, Inc.",
+    "Airfreight 2100, Inc. d.b.a. Air21",
+    "Airspeed International Corp.",
+    "Arnold Mabanglo Express (AMEX)",
+    "ASAP Courier and Logistics Phils., Inc.",
+    "CACS Express and Allied Services, Inc.",
+    "Cavatas-MSI Xpress Services Inc.",
+    "CBL Freight Forwarder & Courier Express Int'l., Inc.",
+    "Chargen Messengerial and General Services",
+    "CJ Transnational Logistics Philippines, Inc.",
+    "Cloud Panda PH, Inc. (d.b.a.) \"Tok Tok\"",
+    "COMET Labor Service Cooperative",
+    "DAG Xpress Courier, Inc.",
+    "Del Asia Express Delivery & General Services, Inc.",
+    "Diar's Assistance, Inc.",
+    "Doorbell Technologies, Inc.",
+    "El Grande Messengerial Services, Inc.",
+    "Electrobill, Inc.",
+    "Entrego Express Corporation",
+    "EXMER, Inc.",
+    "Fastcargo Logistics Corporation",
+    "Fastrak Services, Inc.",
+    "Fastrust Services, Inc.",
+    "FES Business Solutions, Inc.",
+    "Flash Express (PH) Co. Ltd., Inc.",
+    "Flying High Energy Express Services Corporation",
+    "GML Cargo Forwarder & Courier Express Int'l., Inc.",
+    "GO21, Inc.",
+    "GRABEXPRESS, Inc.",
+    "Herald Express, Inc.",
+    "Information Express Services, Inc. (INFORMEX)",
+    "ICS / Intertraffic Transport Corporation",
+    "Intervolve Express Services, Inc.",
+    "Jay Messengerial and Manpower Services",
+    "JG Manpo Janitorial & Messengerial Services Contractor",
+    "Johnny Air Cargo and Delivery Services, Inc.",
+    "JRMT Resources Corporation",
+    "JRS Business Corporation",
+    "LBC Express Corporation",
+    "Libcap Super Express Corp.",
+    "M.M. Bacarisas Courier Services",
+    "Mail Expert Messengerial and General Services, Inc.",
+    "Mailouwyz Courier",
+    "Mailworld Express Service International, Inc.",
+    "Mega Mail Express and General Services, Inc.",
+    "MEJBAS Services, Inc.",
+    "Mesco Express Service Corp.",
+    "Metro Courier, Inc.",
+    "Metro Prideco Services Corporation",
+    "MMSC Services Corporation",
+    "MR Messengerial & General Services",
+    "MSPB Courier Services",
+    "MTEL Trading & Manpower Services",
+    "NGC Enterprises / Nathaniel G Cruz",
+    "(Nathaniel G. Cruz Express Service)",
+    "Ocean Coast Shipping Corp.",
+    "Oceanwave Services, Inc.",
+    "Pelican Express, Inc. to Cliqnship",
+    "PH Gobal Jet Express, Inc. d.b.a. J&T Express",
+    "PPB Messengerial Services, Inc.",
+    "PRC Courier and Maintenance Services",
+    "Priority Handling Logistics, Inc.",
+    "PRO2000 Services, Inc.",
+    "Promark Corporation",
+    "Pronto Express Distribution, Inc.",
+    "Quadx, Inc. d.b.a. GoGo Xpress",
+    "Qualitrans Courier and Manpower Services, Inc.",
+    "R&H Messengerial & General Services",
+    "RAF International Forwarding Philippines, Inc.",
+    "Republic Courier Service, Inc.",
+    "RGServe Manpower Services",
+    "RML Courier Services",
+    "Safefreight Services, Inc.",
+    "San Gabriel General Messengerial Services and Sales, Inc.",
+    "Securetrac, Inc.",
+    "Silver Royal General Services",
+    "Snappmile Logistics, Inc.",
+    "Speedels Services, Inc.",
+    "Speedex Courier and Forwarder, Inc.",
+    "Speedworks Courier Services Corporation",
+    "Spex International Courier Services",
+    "SPX Philippines, Inc.",
+    "St. Joseph LFS Industrial Corp.",
+    "Suremail Courier Services, Inc.",
+    "Telexpress, Inc.",
+    "TNT Express Deliveries (Phils.), Inc.",
+    "Top Dynamics, Inc.",
+    "Topserve Worldwide Express, Inc.",
+    "Triload Express Systems",
+    "UPS-Delbros Transport, Inc.",
+    "Virgo Messengerial Services, Inc.",
+    "Wall Street Courier Services, Inc. d.b.a. Ninja Van",
+    "Wide Wide World Express Corporation",
+    "Worklink Services, Inc.",
+    "Ximex Delivery Express, Inc.",
+    "Xytron International, Inc.",
+    "ZIP Business Services, Inc.",
+    "SF Express",
+    "Mober PH",
+    "Litexpress",
+    "Lalamove",
+    "YTO Express",
+    "LEX PH",
+    # Common variations and shortened names
+    "2GO Express",
+    "2GO",
+    "J&T Express",
+    "J&T",
+    "LBC Express",
+    "LBC",
+    "Ninja Van",
+    "Flash Express",
+    "Grab Express",
+    "GrabExpress",
+    "Airspeed",
+    "Air21",
+    "Black Arrow",
+    "GoGo Xpress",
+    "SPX",
+]
+
+def is_ntc_complaint(agency):
+    """Check if a complaint belongs to NTC (National Telecommunications Commission)"""
+    if pd.isna(agency) or agency == '':
+        return False
+
+    # Handle non-string types
+    if not isinstance(agency, str):
+        agency = str(agency)
+
+    agency_str = agency.strip()
+
+    # Return False for empty strings after stripping
+    if not agency_str:
+        return False
+
+    agency_lower = agency_str.lower()
+
+    # Check for NTC (case-insensitive)
+    # Match whole word to avoid false positives
+    return 'ntc' in agency_lower.split() or agency_lower == 'ntc' or 'ntc' in agency_lower
+
+def is_pemedes_provider(service_provider):
+    """Check if a service provider is a PEMEDES provider with robust matching"""
+    if pd.isna(service_provider) or service_provider == '':
+        return False
+
+    # Handle non-string types
+    if not isinstance(service_provider, str):
+        service_provider = str(service_provider)
+
+    service_provider_str = service_provider.strip()
+
+    # Return False for empty strings after stripping
+    if not service_provider_str:
+        return False
+
+    service_provider_lower = service_provider_str.lower()
+
+    # Strategy 1: Exact match (case-insensitive)
+    for pemedes_sp in PEMEDES_PROVIDERS:
+        if service_provider_lower == pemedes_sp.lower():
+            return True
+
+    # Strategy 2 & 3: Containment checks (bidirectional)
+    for pemedes_sp in PEMEDES_PROVIDERS:
+        pemedes_sp_lower = pemedes_sp.lower()
+
+        # Check if PEMEDES provider name is contained in the data
+        if pemedes_sp_lower in service_provider_lower:
+            # Additional safeguard: must match at least 5 characters or be a known short name
+            if len(pemedes_sp_lower) >= 5 or pemedes_sp_lower in ['lbc', '2go', 'j&t', 'spx', 'air21']:
+                return True
+
+        # Check if data is contained in PEMEDES provider name (reverse check)
+        if service_provider_lower in pemedes_sp_lower:
+            # Additional safeguard: data must be at least 3 characters
+            if len(service_provider_lower) >= 3:
+                return True
+
+    # Strategy 4: Multi-word name matching for complex cases
+    for pemedes_sp in PEMEDES_PROVIDERS:
+        pemedes_sp_lower = pemedes_sp.lower()
+
+        # Only apply to multi-word names
+        if ' ' in pemedes_sp_lower and ' ' in service_provider_lower:
+            words_in_data = set(service_provider_lower.split())
+            words_in_pemedes = set(pemedes_sp_lower.split())
+
+            # Remove common words that don't help identify the provider
+            common_words = {'inc', 'corp', 'corporation', 'express', 'services', 'service',
+                          'courier', 'delivery', 'logistics', 'international', 'phils',
+                          'philippines', 'ltd', 'co', 'and', 'the'}
+            words_in_data = words_in_data - common_words
+            words_in_pemedes = words_in_pemedes - common_words
+
+            # If there's significant word overlap (at least 2 meaningful words)
+            if len(words_in_pemedes) >= 2 and len(words_in_data.intersection(words_in_pemedes)) >= 2:
+                return True
+
+    return False
 
 # DICT ORGANIZATIONAL STRUCTURE AND ISSUE MAPPING
 # This mapping ensures accurate assignment of issues to the correct units and agencies
@@ -894,13 +1117,15 @@ def generate_executive_summary(plans_data):
             "org_summaries": {}
         }
 
-def export_to_pdf(plans_df, top_issues, sp_breakdowns=None):
+def export_to_pdf(plans_df, top_issues, sp_breakdowns=None, dict_unit_counts=None, executive_summary=None):
     """Generate PDF report with service provider breakdowns
 
     Args:
         plans_df: DataFrame of action plans
         top_issues: List of top issues
         sp_breakdowns: Optional list of service provider breakdown data
+        dict_unit_counts: Optional series of DICT unit counts
+        executive_summary: Optional dictionary containing executive summary data
     """
     from reportlab.lib.pagesizes import landscape, A4
 
@@ -956,19 +1181,59 @@ def export_to_pdf(plans_df, top_issues, sp_breakdowns=None):
     )
 
     total_top5 = sum([issue['count'] for issue in top_issues])
-    # Note: total_top5 represents complaints in top 5 issues, not total dataset
-    # For full dataset count, would need to pass as parameter
-
-    summary_text = f"""
-    <b>Executive Summary:</b><br/>
-    This report identifies the top 5 priority complaint issues requiring immediate attention and provides strategic
-    action plans for resolution. The analysis covers {total_top5:,} complaints from the top 5 issues, representing the most critical
-    areas for intervention. Each issue has been assigned to the appropriate DICT unit or agency based on their
-    mandate and expertise. Units are requested to review their assigned action plans, provide implementation remarks,
-    and update resolution status as progress is made.
-    """
+    
+    # Use dynamic summary if available
+    if executive_summary and 'main_summary' in executive_summary:
+        summary_text = f"<b>Executive Summary:</b><br/>{executive_summary['main_summary']}"
+    else:
+        summary_text = f"""
+        <b>Executive Summary:</b><br/>
+        This report identifies the top 5 priority complaint issues requiring immediate attention and provides strategic
+        action plans for resolution. The analysis covers {total_top5:,} complaints from the top 5 issues, representing the most critical
+        areas for intervention. Each issue has been assigned to the appropriate DICT unit or agency based on their
+        mandate and expertise. Units are requested to review their assigned action plans, provide implementation remarks,
+        and update resolution status as progress is made.
+        """
     elements.append(Paragraph(summary_text, body_style))
     elements.append(Spacer(1, 0.2*inch))
+
+    # Organization Summaries
+    if executive_summary and 'org_summaries' in executive_summary and executive_summary['org_summaries']:
+        elements.append(Paragraph("Summary by Organization Type", heading_style))
+        
+        # Map keys to display titles if needed, or just use keys
+        categories = [
+            ("DICT Delivery Units", ["Delivery Unit", "DICT Internal", "Delivery Unit (DICT Internal)"]),
+            ("Attached Agencies", ["Attached Agency", "Attached Agencies"]),
+            ("External Agencies", ["External Agency", "External Agencies"])
+        ]
+        
+        # Display in specific order
+        for title, keys in categories:
+            summary_text = None
+            for k, v in executive_summary['org_summaries'].items():
+                if any(key_part.lower() in k.lower() for key_part in keys):
+                    summary_text = v
+                    break
+            
+            if summary_text:
+                elements.append(Paragraph(f"<b>{title}</b>", body_style))
+                elements.append(Paragraph(summary_text, body_style))
+                elements.append(Spacer(1, 0.1*inch))
+        
+        # Catch any remaining summaries not in the categories
+        for k, v in executive_summary['org_summaries'].items():
+            matched = False
+            for _, keys in categories:
+                if any(key_part.lower() in k.lower() for key_part in keys):
+                    matched = True
+                    break
+            if not matched:
+                elements.append(Paragraph(f"<b>{k}</b>", body_style))
+                elements.append(Paragraph(v, body_style))
+                elements.append(Spacer(1, 0.1*inch))
+
+        elements.append(Spacer(1, 0.1*inch))
 
     # Top Issues Summary
     elements.append(Paragraph("I. Top 5 Priority Issues", heading_style))
@@ -1179,18 +1444,49 @@ def export_to_pdf(plans_df, top_issues, sp_breakdowns=None):
                 elements.append(Paragraph(analysis_text, body_style_sp))
                 elements.append(Spacer(1, 0.2*inch))
 
+    # DICT Unit Breakdown
+    if dict_unit_counts is not None and len(dict_unit_counts) > 0:
+        elements.append(Spacer(1, 0.3*inch))
+        elements.append(Paragraph("IV. Complaints by DICT Unit", heading_style))
+        
+        # Add description
+        top_unit = dict_unit_counts.index[0]
+        top_count = dict_unit_counts.iloc[0]
+        total_unit_complaints = dict_unit_counts.sum()
+        desc_text = f"The table below details the distribution of complaints across different DICT units. {top_unit} received the highest volume with {top_count} complaints, accounting for {(top_count/total_unit_complaints*100):.1f}% of the top unit-attributed complaints."
+        elements.append(Paragraph(desc_text, body_style))
+        elements.append(Spacer(1, 0.15*inch))
+        
+        unit_data = [['DICT Unit', 'Count']]
+        for unit, count in dict_unit_counts.items():
+            unit_data.append([str(unit), str(count)])
+            
+        unit_table = Table(unit_data, colWidths=[4*inch, 1.5*inch])
+        unit_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#3b82f6')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('TOPPADDING', (0, 0), (-1, 0), 12),
+            ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#e5e7eb')),
+        ]))
+        elements.append(unit_table)
+
     # Build PDF
     doc.build(elements)
     buffer.seek(0)
     return buffer
 
-def export_to_word(plans_df, top_issues, sp_breakdowns=None):
+def export_to_word(plans_df, top_issues, sp_breakdowns=None, dict_unit_counts=None, executive_summary=None):
     """Generate Word document report with service provider breakdowns
 
     Args:
         plans_df: DataFrame of action plans
         top_issues: List of top issues
         sp_breakdowns: Optional list of service provider breakdown data
+        dict_unit_counts: Optional series of DICT unit counts
+        executive_summary: Optional dictionary containing executive summary data
     """
     from docx.oxml import OxmlElement
     from docx.oxml.ns import qn
@@ -1228,6 +1524,54 @@ def export_to_word(plans_df, top_issues, sp_breakdowns=None):
     subtitle_run.font.color.rgb = RGBColor(107, 114, 128)
 
     doc.add_paragraph()
+
+    # Executive Summary
+    doc.add_heading('Executive Summary', 1)
+    
+    if executive_summary and 'main_summary' in executive_summary:
+        doc.add_paragraph(executive_summary['main_summary'])
+    else:
+        doc.add_paragraph("This report identifies the top 5 priority complaint issues requiring immediate attention and provides strategic action plans for resolution.")
+    
+    doc.add_paragraph()
+
+    # Organization Summaries
+    if executive_summary and 'org_summaries' in executive_summary and executive_summary['org_summaries']:
+        doc.add_heading('Summary by Organization Type', 2)
+        
+        categories = [
+            ("DICT Delivery Units", ["Delivery Unit", "DICT Internal", "Delivery Unit (DICT Internal)"]),
+            ("Attached Agencies", ["Attached Agency", "Attached Agencies"]),
+            ("External Agencies", ["External Agency", "External Agencies"])
+        ]
+        
+        for title, keys in categories:
+            summary_text = None
+            for k, v in executive_summary['org_summaries'].items():
+                if any(key_part.lower() in k.lower() for key_part in keys):
+                    summary_text = v
+                    break
+            
+            if summary_text:
+                p = doc.add_paragraph()
+                runner = p.add_run(title)
+                runner.bold = True
+                doc.add_paragraph(summary_text)
+                doc.add_paragraph()
+        
+        # Catch remaining
+        for k, v in executive_summary['org_summaries'].items():
+            matched = False
+            for _, keys in categories:
+                if any(key_part.lower() in k.lower() for key_part in keys):
+                    matched = True
+                    break
+            if not matched:
+                p = doc.add_paragraph()
+                runner = p.add_run(k)
+                runner.bold = True
+                doc.add_paragraph(v)
+                doc.add_paragraph()
 
     # Top Issues Section
     doc.add_heading('Top 5 Priority Issues', 1)
@@ -1408,6 +1752,39 @@ def export_to_word(plans_df, top_issues, sp_breakdowns=None):
 
             doc.add_paragraph()
 
+    # DICT Unit Breakdown
+    if dict_unit_counts is not None and len(dict_unit_counts) > 0:
+        doc.add_paragraph()
+        doc.add_heading('Complaints by DICT Unit', 1)
+        
+        # Add description
+        top_unit = dict_unit_counts.index[0]
+        top_count = dict_unit_counts.iloc[0]
+        total_unit_complaints = dict_unit_counts.sum()
+        desc_text = f"The table below details the distribution of complaints across different DICT units. {top_unit} received the highest volume with {top_count} complaints, accounting for {(top_count/total_unit_complaints*100):.1f}% of the top unit-attributed complaints."
+        doc.add_paragraph(desc_text)
+        doc.add_paragraph()
+        
+        unit_table = doc.add_table(rows=1, cols=2)
+        unit_table.style = 'Light Grid Accent 1'
+        
+        # Header
+        header_cells = unit_table.rows[0].cells
+        header_cells[0].text = 'DICT Unit'
+        header_cells[1].text = 'Count'
+        
+        for cell in header_cells:
+            if cell.paragraphs and cell.paragraphs[0].runs:
+                cell.paragraphs[0].runs[0].font.bold = True
+                cell.paragraphs[0].runs[0].font.color.rgb = RGBColor(255, 255, 255)
+            set_cell_background(cell, '3B82F6')
+            
+        # Data
+        for unit, count in dict_unit_counts.items():
+            row_cells = unit_table.add_row().cells
+            row_cells[0].text = str(unit)
+            row_cells[1].text = str(count)
+
     # Save to buffer
     buffer = BytesIO()
     doc.save(buffer)
@@ -1456,6 +1833,67 @@ def render_weekly_report(df):
     # - FLS resolution filtering (Resolution != "FLS")
     # - Invalid date removal
     # Therefore, we work with the data as-is without re-processing
+
+    # Custom Date Range Filter for AI Report
+    if 'Date of Complaint' in df.columns:
+        with st.expander("📅 Custom Date Range for AI Report", expanded=True):
+            st.markdown("Select a date range to filter the data for the AI report and view specific totals.")
+            
+            valid_dates = df['Date of Complaint'].dropna()
+            if len(valid_dates) > 0:
+                min_date_avail = valid_dates.min().date()
+                max_date_avail = valid_dates.max().date()
+                
+                # Default to last 7 days or full range if shorter
+                default_end = max_date_avail
+                default_start = max_date_avail - pd.Timedelta(days=7)
+                if default_start < min_date_avail:
+                    default_start = min_date_avail
+                
+                col_date1, col_date2 = st.columns(2)
+                with col_date1:
+                    start_date = st.date_input("Start Date", value=default_start, min_value=min_date_avail, max_value=max_date_avail, key="ai_start_date", on_change=clear_ai_report_state)
+                with col_date2:
+                    end_date = st.date_input("End Date", value=default_end, min_value=min_date_avail, max_value=max_date_avail, key="ai_end_date", on_change=clear_ai_report_state)
+                
+                # Filter data
+                mask = (df['Date of Complaint'].dt.date >= start_date) & (df['Date of Complaint'].dt.date <= end_date)
+                df_filtered = df[mask].copy()
+                
+                # Calculate Metrics on Filtered Data
+                custom_total = len(df_filtered)
+                
+                # NTC Calculation
+                ntc_custom_count = 0
+                if 'Agency' in df_filtered.columns:
+                    ntc_mask_custom = df_filtered['Agency'].apply(is_ntc_complaint)
+                    if 'Complaint Category' in df_filtered.columns:
+                        ntc_mask_custom = ntc_mask_custom | (df_filtered['Complaint Category'].astype(str).str.strip().str.upper() == "TELCO INTERNET ISSUES")
+                    ntc_custom_count = len(df_filtered[ntc_mask_custom])
+                
+                # PEMEDES Calculation
+                pemedes_custom_count = 0
+                if 'Service Providers' in df_filtered.columns:
+                    pemedes_mask_custom = df_filtered['Service Providers'].apply(is_pemedes_provider)
+                    if 'Complaint Category' in df_filtered.columns:
+                        pemedes_mask_custom = pemedes_mask_custom | (df_filtered['Complaint Category'].astype(str).str.strip().str.upper() == "DELIVERY CONCERNS (SP)")
+                    if 'Agency' in df_filtered.columns:
+                        pemedes_mask_custom = pemedes_mask_custom | (df_filtered['Agency'].astype(str).str.strip().str.upper() == "PRD")
+                    pemedes_custom_count = len(df_filtered[pemedes_mask_custom])
+
+                # Display Metrics
+                st.markdown("#### Weekly/Custom Totals")
+                c_col1, c_col2, c_col3 = st.columns(3)
+                c_col1.metric("Total Complaints", f"{custom_total:,}", help=f"Total complaints from {start_date} to {end_date}")
+                c_col2.metric("NTC Complaints", f"{ntc_custom_count:,}", help="Includes Agency='NTC' and Category='Telco Internet Issues'")
+                c_col3.metric("PEMEDES Resolved", f"{pemedes_custom_count:,}", help="Includes PEMEDES Providers, Delivery Concerns (SP), and Agency='PRD'")
+                
+                # Use filtered data for the report
+                df = df_filtered
+            else:
+                st.warning("No valid dates found in data.")
+    else:
+        st.warning("Date of Complaint column missing. Cannot filter by date.")
 
     # Data alignment confirmation
     total_records = len(df)
@@ -1537,6 +1975,14 @@ def render_weekly_report(df):
     st.caption("**Note:** Source indicates whether the issue is from Category or Nature field. Assigned Unit is auto-categorized based on DICT organizational structure.")
 
     st.markdown("---")
+
+    # DICT Unit Analysis - Calculation for Export Only
+    dict_unit_counts = None
+    if 'DICT UNIT' in df.columns:
+        valid_units = df['DICT UNIT'].dropna()
+        valid_units = valid_units[valid_units != '']
+        if len(valid_units) > 0:
+            dict_unit_counts = valid_units.value_counts().head(10)
 
     # Generation Button - Centered and prominent
     col_spacer1, col_btn, col_spacer2 = st.columns([1, 2, 1])
@@ -1866,7 +2312,7 @@ def render_weekly_report(df):
             # Cache the export data as bytes to prevent regeneration on download
             if 'cached_pdf_bytes' not in st.session_state or st.session_state.get('data_changed', True):
                 try:
-                    pdf_buffer = export_to_pdf(export_df, top_issues, issues_with_breakdown)
+                    pdf_buffer = export_to_pdf(export_df, top_issues, issues_with_breakdown, dict_unit_counts, st.session_state.get('executive_summary'))
                     st.session_state.cached_pdf_bytes = pdf_buffer.getvalue()  # Store as bytes
                     st.session_state.pdf_error = None
                 except Exception as e:
@@ -1875,7 +2321,7 @@ def render_weekly_report(df):
 
             if 'cached_word_bytes' not in st.session_state or st.session_state.get('data_changed', True):
                 try:
-                    word_buffer = export_to_word(export_df, top_issues, issues_with_breakdown)
+                    word_buffer = export_to_word(export_df, top_issues, issues_with_breakdown, dict_unit_counts, st.session_state.get('executive_summary'))
                     st.session_state.cached_word_bytes = word_buffer.getvalue()  # Store as bytes
                     st.session_state.word_error = None
                 except Exception as e:

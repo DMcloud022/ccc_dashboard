@@ -1433,7 +1433,10 @@ def main():
         with col3:
             if 'Agency' in df_period1.columns:
                 try:
-                    ntc_count = len(df_period1[df_period1['Agency'].apply(is_ntc_complaint)])
+                    ntc_mask = df_period1['Agency'].apply(is_ntc_complaint)
+                    if 'Complaint Category' in df_period1.columns:
+                        ntc_mask = ntc_mask | (df_period1['Complaint Category'].astype(str).str.strip().str.upper() == "TELCO INTERNET ISSUES")
+                    ntc_count = len(df_period1[ntc_mask])
                     ntc_pct = (ntc_count / period1_count * 100) if period1_count > 0 else 0
                     st.metric(
                         label="NTC Complaints",
@@ -1460,17 +1463,17 @@ def main():
                     pemedes_count = len(df_period1[pemedes_mask])
                     pemedes_pct = (pemedes_count / period1_count * 100) if period1_count > 0 else 0
                     st.metric(
-                        label="PEMEDES Complaints",
+                        label="PEMEDES Resolved Complaints",
                         value=f"{pemedes_count:,}",
                         delta=f"{pemedes_pct:.1f}% of total",
                         delta_color="off",
                         help="Complaints from PEMEDES service providers, Delivery Concerns (SP), or Agency PRD"
                     )
                 except Exception as e:
-                    st.metric("PEMEDES Complaints", "Error")
-                    st.error(f"Error counting PEMEDES complaints: {str(e)}")
+                    st.metric("PEMEDES Resolved Complaints", "Error")
+                    st.error(f"Error counting PEMEDES resolved complaints: {str(e)}")
             else:
-                st.metric("PEMEDES Complaints", "N/A")
+                st.metric("PEMEDES Resolved Complaints", "N/A")
 
         # Overall charts - Compact design
         chart_height = 350
@@ -1506,6 +1509,20 @@ def main():
             else:
                 st.error("'Complaint Nature' column not found")
 
+        # Row 2: DICT Unit
+        st.markdown(f"#### Complaints by DICT Unit ({period1_label})")
+        if 'DICT UNIT' in df_period1.columns:
+            valid_data = df_period1['DICT UNIT'].dropna()
+            valid_data = valid_data[valid_data != '']
+            if len(valid_data) > 0:
+                unit_counts = valid_data.value_counts().head(10)
+                fig = create_bar_chart(unit_counts, "DICT Unit", 'oranges', chart_height)
+                st.plotly_chart(fig, use_container_width=True, key="overall_dict_unit")
+            else:
+                st.info("No DICT Unit data available")
+        else:
+            st.info("'DICT UNIT' column not found in data")
+
         # Monthly Trend
         st.markdown(f"#### Monthly Complaint Trend ({period1_label})")
         if 'Date of Complaint' in df_period1.columns:
@@ -1535,8 +1552,16 @@ def main():
         if 'Agency' in df_period1.columns:
             try:
                 # Use the is_ntc_complaint function for consistent filtering
-                df_ntc_period1 = df_period1[df_period1['Agency'].apply(is_ntc_complaint)]
-                df_ntc_period3 = df_period3[df_period3['Agency'].apply(is_ntc_complaint)]
+                # Also include "Telco Internet Issues" from Complaint Category
+                ntc_mask_period1 = df_period1['Agency'].apply(is_ntc_complaint)
+                if 'Complaint Category' in df_period1.columns:
+                    ntc_mask_period1 = ntc_mask_period1 | (df_period1['Complaint Category'].astype(str).str.strip().str.upper() == "TELCO INTERNET ISSUES")
+                df_ntc_period1 = df_period1[ntc_mask_period1]
+
+                ntc_mask_period3 = df_period3['Agency'].apply(is_ntc_complaint)
+                if 'Complaint Category' in df_period3.columns:
+                    ntc_mask_period3 = ntc_mask_period3 | (df_period3['Complaint Category'].astype(str).str.strip().str.upper() == "TELCO INTERNET ISSUES")
+                df_ntc_period3 = df_period3[ntc_mask_period3]
 
                 # Data integrity check
                 if len(df_ntc_period1) == 0:
@@ -1613,7 +1638,7 @@ def main():
 
                 # Data integrity check
                 if len(df_pemedes_period1) == 0:
-                    st.warning(f"⚠️ No PEMEDES complaints found in {period1_label} dataset. This may indicate:")
+                    st.warning(f"⚠️ No PEMEDES resolved complaints found in {period1_label} dataset. This may indicate:")
                     st.write("• Service provider names don't match the PEMEDES provider list")
                     st.write("• No PEMEDES-related complaints in this period")
                     st.write("• Check the 'Service Providers' column format")
@@ -1633,7 +1658,7 @@ def main():
                     value=f"{pemedes_period1_count:,}",
                     delta=f"{pemedes_period1_pct:.1f}% of all complaints",
                     delta_color="off",
-                    help=f"PEMEDES complaints for {period1_label}"
+                    help=f"PEMEDES resolved complaints for {period1_label}"
                 )
             with kpi_col2:
                 pemedes_period3_count = len(df_pemedes_period3)
@@ -1643,7 +1668,7 @@ def main():
                     value=f"{pemedes_period3_count:,}",
                     delta=f"{pemedes_period3_pct:.1f}% of all complaints",
                     delta_color="off",
-                    help=f"PEMEDES complaints for {period3_label}"
+                    help=f"PEMEDES resolved complaints for {period3_label}"
                 )
 
             st.markdown("---")
@@ -1656,7 +1681,7 @@ def main():
                 "pemedes_providers"
             )
         else:
-            st.error("❌ 'Service Providers' column not found in data. Cannot filter PEMEDES complaints.")
+            st.error("❌ 'Service Providers' column not found in data. Cannot filter PEMEDES resolved complaints.")
             st.info("💡 Please ensure your data has a 'Service Providers' column with PEMEDES provider names.")
 
         # Display data processing warnings at the bottom
@@ -1690,7 +1715,10 @@ def main():
             with integrity_col1:
                 st.write("**Filter Validation:**")
                 if 'Agency' in df_period1.columns:
-                    ntc_count = len(df_period1[df_period1['Agency'].apply(is_ntc_complaint)])
+                    ntc_mask = df_period1['Agency'].apply(is_ntc_complaint)
+                    if 'Complaint Category' in df_period1.columns:
+                        ntc_mask = ntc_mask | (df_period1['Complaint Category'].astype(str).str.strip().str.upper() == "TELCO INTERNET ISSUES")
+                    ntc_count = len(df_period1[ntc_mask])
                     st.write(f"NTC: {ntc_count:,} ({(ntc_count/len(df_period1)*100):.1f}%)")
 
                 if 'Service Providers' in df_period1.columns:
