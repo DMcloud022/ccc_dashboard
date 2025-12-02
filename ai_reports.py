@@ -186,6 +186,28 @@ PEMEDES_PROVIDERS = [
     "SPX",
 ]
 
+# NTC Service Providers List (Copied from dashboard.py for consistency)
+NTC_PROVIDERS = [
+    "PLDT",
+    "Converge",
+    "Globe",
+    "Smart",
+    "DITO",
+    "Sky Cable",
+    "Cignal",
+    "Eastern",
+    "DITO Telecommunity",
+    "Globe Telecom",
+    "Smart Communications",
+    "PLDT Inc.",
+    "Converge ICT Solutions",
+    "Sky Fiber",
+    "Royal Cable",
+    "Radius Telecoms",
+    "PT&T",
+    "Now Telecom"
+]
+
 def is_ntc_complaint(agency):
     """Check if a complaint belongs to NTC (National Telecommunications Commission)"""
     if pd.isna(agency) or agency == '':
@@ -206,6 +228,36 @@ def is_ntc_complaint(agency):
     # Check for NTC (case-insensitive)
     # Match whole word to avoid false positives
     return 'ntc' in agency_lower.split() or agency_lower == 'ntc' or 'ntc' in agency_lower
+
+def is_ntc_provider(service_provider):
+    """Check if a service provider is an NTC provider"""
+    if pd.isna(service_provider) or service_provider == '':
+        return False
+
+    # Handle non-string types
+    if not isinstance(service_provider, str):
+        service_provider = str(service_provider)
+
+    service_provider_str = service_provider.strip()
+
+    # Return False for empty strings after stripping
+    if not service_provider_str:
+        return False
+
+    service_provider_lower = service_provider_str.lower()
+
+    for ntc_sp in NTC_PROVIDERS:
+        ntc_sp_lower = ntc_sp.lower()
+        
+        # Check for exact match or containment
+        if ntc_sp_lower == service_provider_lower:
+            return True
+        if ntc_sp_lower in service_provider_lower:
+            return True
+        if service_provider_lower in ntc_sp_lower and len(service_provider_lower) > 3:
+            return True
+            
+    return False
 
 def is_pemedes_provider(service_provider):
     """Check if a service provider is a PEMEDES provider with robust matching"""
@@ -1869,16 +1921,30 @@ def render_weekly_report(df):
                     ntc_mask_custom = df_filtered['Agency'].apply(is_ntc_complaint)
                     if 'Complaint Category' in df_filtered.columns:
                         ntc_mask_custom = ntc_mask_custom | (df_filtered['Complaint Category'].astype(str).str.strip().str.upper() == "TELCO INTERNET ISSUES")
+                    
+                    # Exclude PEMEDES providers from NTC count
+                    if 'Service Providers' in df_filtered.columns:
+                        pemedes_mask_excl = df_filtered['Service Providers'].apply(is_pemedes_provider)
+                        ntc_mask_custom = ntc_mask_custom & (~pemedes_mask_excl)
+
                     ntc_custom_count = len(df_filtered[ntc_mask_custom])
                 
                 # PEMEDES Calculation
                 pemedes_custom_count = 0
                 if 'Service Providers' in df_filtered.columns:
                     pemedes_mask_custom = df_filtered['Service Providers'].apply(is_pemedes_provider)
+                    
+                    # Create NTC provider mask for exclusion
+                    ntc_provider_mask = df_filtered['Service Providers'].apply(is_ntc_provider)
+                    
                     if 'Complaint Category' in df_filtered.columns:
                         pemedes_mask_custom = pemedes_mask_custom | (df_filtered['Complaint Category'].astype(str).str.strip().str.upper() == "DELIVERY CONCERNS (SP)")
                     if 'Agency' in df_filtered.columns:
                         pemedes_mask_custom = pemedes_mask_custom | (df_filtered['Agency'].astype(str).str.strip().str.upper() == "PRD")
+                    
+                    # Apply exclusion: Must be PEMEDES AND NOT NTC Provider
+                    pemedes_mask_custom = pemedes_mask_custom & (~ntc_provider_mask)
+                    
                     pemedes_custom_count = len(df_filtered[pemedes_mask_custom])
 
                 # Display Metrics

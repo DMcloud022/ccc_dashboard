@@ -153,6 +153,28 @@ PEMEDES_PROVIDERS = [
     "SPX",
 ]
 
+# NTC Service Providers List
+NTC_PROVIDERS = [
+    "PLDT",
+    "Converge",
+    "Globe",
+    "Smart",
+    "DITO",
+    "Sky Cable",
+    "Cignal",
+    "Eastern",
+    "DITO Telecommunity",
+    "Globe Telecom",
+    "Smart Communications",
+    "PLDT Inc.",
+    "Converge ICT Solutions",
+    "Sky Fiber",
+    "Royal Cable",
+    "Radius Telecoms",
+    "PT&T",
+    "Now Telecom"
+]
+
 # Mapping for normalizing service provider names to handle duplicates
 PROVIDER_ALIASES = {
     # SPX
@@ -452,6 +474,36 @@ def is_pemedes_provider(service_provider):
             if len(words_in_pemedes) >= 2 and len(words_in_data.intersection(words_in_pemedes)) >= 2:
                 return True
 
+    return False
+
+def is_ntc_provider(service_provider):
+    """Check if a service provider is an NTC provider"""
+    if pd.isna(service_provider) or service_provider == '':
+        return False
+
+    # Handle non-string types
+    if not isinstance(service_provider, str):
+        service_provider = str(service_provider)
+
+    service_provider_str = service_provider.strip()
+
+    # Return False for empty strings after stripping
+    if not service_provider_str:
+        return False
+
+    service_provider_lower = service_provider_str.lower()
+
+    for ntc_sp in NTC_PROVIDERS:
+        ntc_sp_lower = ntc_sp.lower()
+        
+        # Check for exact match or containment
+        if ntc_sp_lower == service_provider_lower:
+            return True
+        if ntc_sp_lower in service_provider_lower:
+            return True
+        if service_provider_lower in ntc_sp_lower and len(service_provider_lower) > 3:
+            return True
+            
     return False
 
 def extract_spreadsheet_id(url):
@@ -773,12 +825,17 @@ def prepare_data(df):
         df['Year'] = df['Date of Complaint'].dt.year
         df['Month'] = df['Date of Complaint'].dt.month
 
-    # Clean text columns (remove extra whitespace)
-    text_columns = ['Agency', 'Service Providers', 'Complaint Category', 'Complaint Nature']
+    # Clean text columns (remove extra whitespace) and ensure capitalization
+    text_columns = ['Agency', 'Service Providers', 'Complaint Category', 'Complaint Nature', 'DICT UNIT']
     for col in text_columns:
         if col in df.columns:
             df[col] = df[col].astype(str).str.strip()
             df[col] = df[col].replace(['nan', 'None', '', 'NaN', 'NaT'], np.nan)
+            
+            # Capitalize first letter for specific columns (Sentence case)
+            if col in ['Complaint Category', 'Complaint Nature', 'DICT UNIT', 'Agency']:
+                # Capitalize first letter, leave rest as is (preserves acronyms like DICT)
+                df[col] = df[col].apply(lambda x: str(x)[0].upper() + str(x)[1:] if pd.notna(x) and len(str(x)) > 0 else x)
 
     # Normalize Service Providers to handle duplicates/variations
     if 'Service Providers' in df.columns:
@@ -788,7 +845,14 @@ def prepare_data(df):
                 return name
             name_str = str(name).strip()
             name_lower = name_str.lower()
-            return PROVIDER_ALIASES.get(name_lower, name_lower)
+            
+            # Check aliases first
+            if name_lower in PROVIDER_ALIASES:
+                return PROVIDER_ALIASES[name_lower]
+            
+            # If not in aliases, return Title Case to ensure capitalization
+            # This handles "unknown courier" -> "Unknown Courier"
+            return name_str.title()
 
         df['Service Providers'] = df['Service Providers'].apply(normalize_provider)
 
@@ -1436,6 +1500,12 @@ def main():
                     ntc_mask = df_period1['Agency'].apply(is_ntc_complaint)
                     if 'Complaint Category' in df_period1.columns:
                         ntc_mask = ntc_mask | (df_period1['Complaint Category'].astype(str).str.strip().str.upper() == "TELCO INTERNET ISSUES")
+                    
+                    # Exclude PEMEDES providers from NTC count
+                    if 'Service Providers' in df_period1.columns:
+                        pemedes_mask_excl = df_period1['Service Providers'].apply(is_pemedes_provider)
+                        ntc_mask = ntc_mask & (~pemedes_mask_excl)
+
                     ntc_count = len(df_period1[ntc_mask])
                     ntc_pct = (ntc_count / period1_count * 100) if period1_count > 0 else 0
                     st.metric(
@@ -1460,6 +1530,11 @@ def main():
                         pemedes_mask = pemedes_mask | (df_period1['Complaint Category'].astype(str).str.strip().str.upper() == "DELIVERY CONCERNS (SP)")
                     if 'Agency' in df_period1.columns:
                         pemedes_mask = pemedes_mask | (df_period1['Agency'].astype(str).str.strip().str.upper() == "PRD")
+                    
+                    # Exclude NTC providers from PEMEDES count
+                    ntc_provider_mask = df_period1['Service Providers'].apply(is_ntc_provider)
+                    pemedes_mask = pemedes_mask & (~ntc_provider_mask)
+
                     pemedes_count = len(df_period1[pemedes_mask])
                     pemedes_pct = (pemedes_count / period1_count * 100) if period1_count > 0 else 0
                     st.metric(
@@ -1556,11 +1631,23 @@ def main():
                 ntc_mask_period1 = df_period1['Agency'].apply(is_ntc_complaint)
                 if 'Complaint Category' in df_period1.columns:
                     ntc_mask_period1 = ntc_mask_period1 | (df_period1['Complaint Category'].astype(str).str.strip().str.upper() == "TELCO INTERNET ISSUES")
+                
+                # Exclude PEMEDES providers from NTC count
+                if 'Service Providers' in df_period1.columns:
+                    pemedes_mask_excl1 = df_period1['Service Providers'].apply(is_pemedes_provider)
+                    ntc_mask_period1 = ntc_mask_period1 & (~pemedes_mask_excl1)
+
                 df_ntc_period1 = df_period1[ntc_mask_period1]
 
                 ntc_mask_period3 = df_period3['Agency'].apply(is_ntc_complaint)
                 if 'Complaint Category' in df_period3.columns:
                     ntc_mask_period3 = ntc_mask_period3 | (df_period3['Complaint Category'].astype(str).str.strip().str.upper() == "TELCO INTERNET ISSUES")
+                
+                # Exclude PEMEDES providers from NTC count
+                if 'Service Providers' in df_period3.columns:
+                    pemedes_mask_excl3 = df_period3['Service Providers'].apply(is_pemedes_provider)
+                    ntc_mask_period3 = ntc_mask_period3 & (~pemedes_mask_excl3)
+
                 df_ntc_period3 = df_period3[ntc_mask_period3]
 
                 # Data integrity check
@@ -1627,6 +1714,11 @@ def main():
                     pemedes_mask_period1 = pemedes_mask_period1 | (df_period1['Complaint Category'].astype(str).str.strip().str.upper() == "DELIVERY CONCERNS (SP)")
                 if 'Agency' in df_period1.columns:
                     pemedes_mask_period1 = pemedes_mask_period1 | (df_period1['Agency'].astype(str).str.strip().str.upper() == "PRD")
+                
+                # Exclude NTC providers from PEMEDES count
+                ntc_provider_mask1 = df_period1['Service Providers'].apply(is_ntc_provider)
+                pemedes_mask_period1 = pemedes_mask_period1 & (~ntc_provider_mask1)
+
                 df_pemedes_period1 = df_period1[pemedes_mask_period1]
 
                 pemedes_mask_period3 = df_period3['Service Providers'].apply(is_pemedes_provider)
@@ -1634,6 +1726,11 @@ def main():
                     pemedes_mask_period3 = pemedes_mask_period3 | (df_period3['Complaint Category'].astype(str).str.strip().str.upper() == "DELIVERY CONCERNS (SP)")
                 if 'Agency' in df_period3.columns:
                     pemedes_mask_period3 = pemedes_mask_period3 | (df_period3['Agency'].astype(str).str.strip().str.upper() == "PRD")
+                
+                # Exclude NTC providers from PEMEDES count
+                ntc_provider_mask3 = df_period3['Service Providers'].apply(is_ntc_provider)
+                pemedes_mask_period3 = pemedes_mask_period3 & (~ntc_provider_mask3)
+
                 df_pemedes_period3 = df_period3[pemedes_mask_period3]
 
                 # Data integrity check
@@ -1718,6 +1815,12 @@ def main():
                     ntc_mask = df_period1['Agency'].apply(is_ntc_complaint)
                     if 'Complaint Category' in df_period1.columns:
                         ntc_mask = ntc_mask | (df_period1['Complaint Category'].astype(str).str.strip().str.upper() == "TELCO INTERNET ISSUES")
+                    
+                    # Exclude PEMEDES providers from NTC count
+                    if 'Service Providers' in df_period1.columns:
+                        pemedes_mask_excl = df_period1['Service Providers'].apply(is_pemedes_provider)
+                        ntc_mask = ntc_mask & (~pemedes_mask_excl)
+
                     ntc_count = len(df_period1[ntc_mask])
                     st.write(f"NTC: {ntc_count:,} ({(ntc_count/len(df_period1)*100):.1f}%)")
 
@@ -1728,6 +1831,11 @@ def main():
                         pemedes_mask = pemedes_mask | (df_period1['Complaint Category'].astype(str).str.strip().str.upper() == "DELIVERY CONCERNS (SP)")
                     if 'Agency' in df_period1.columns:
                         pemedes_mask = pemedes_mask | (df_period1['Agency'].astype(str).str.strip().str.upper() == "PRD")
+                    
+                    # Exclude NTC providers from PEMEDES count
+                    ntc_provider_mask = df_period1['Service Providers'].apply(is_ntc_provider)
+                    pemedes_mask = pemedes_mask & (~ntc_provider_mask)
+
                     pem_count = len(df_period1[pemedes_mask])
                    
                     st.write(f"PEMEDES: {pem_count:,} ({(pem_count/len(df_period1)*100):.1f}%)")
