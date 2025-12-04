@@ -553,7 +553,7 @@ def extract_spreadsheet_id(url):
 
     return None
 
-@st.cache_data(ttl=60, show_spinner=False)
+@st.cache_data(ttl=300, show_spinner=False)
 def load_data_from_public_gsheet(spreadsheet_url, timestamp):
     """Load data from public Google Sheets without authentication"""
     try:
@@ -592,7 +592,7 @@ def load_data_from_public_gsheet(spreadsheet_url, timestamp):
         st.error(f"❌ Error loading public sheet: {str(e)}")
         return None
 
-@st.cache_data(ttl=60, show_spinner=False)
+@st.cache_data(ttl=300, show_spinner=False)
 def load_data_from_gsheet_with_auth(credentials_dict, spreadsheet_url, timestamp):
     """Load data from Google Sheets with service account authentication"""
     try:
@@ -966,38 +966,48 @@ def create_bar_chart(data_series, title, color_scale='blues', height=500):
     fig.update_layout(
         height=height,
         showlegend=False,
-        margin=dict(l=3, r=70, t=3, b=3),  # Increased right margin for labels
+        margin=dict(l=3, r=20, t=3, b=3),  # Optimized margin for better space utilization
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
-        font=dict(family='Inter, sans-serif', size=14, color='#374151'),
+        font=dict(family='Inter, sans-serif', size=13, color='#374151'),
         xaxis=dict(
             showgrid=True,
             gridcolor='#f3f4f6',
             zeroline=False,
-            title_font=dict(size=14),
+            title_font=dict(size=13),
             tickangle=0,  # Force numbers horizontal
-            tickfont=dict(size=12),
-            automargin=True
+            tickfont=dict(size=13),
+            automargin=True,
+            fixedrange=True
         ),
         yaxis=dict(
             categoryorder='total ascending',
             showgrid=False,
             tickfont=dict(size=13),
             tickangle=0,  # Force labels horizontal
-            automargin=True
+            automargin=True,
+            autorange=True
         ),
         coloraxis_showscale=False,
         uniformtext_minsize=8,
         uniformtext_mode='hide'
     )
+    # Calculate percentages and update text
+    total = data_series.sum()
+    percentages = []
+    for value in data_series.values:
+        percentage = (value / total * 100) if total > 0 else 0
+        percentages.append(f"{percentage:.1f}%")
+    
     fig.update_traces(
         marker=dict(
             line=dict(width=0)
         ),
-        texttemplate='%{text:,}',  # Format numbers with commas
-        textposition='auto',  # Auto position labels (inside for long bars, outside for short)
-        textfont=dict(size=12, family='Inter, sans-serif', weight='bold'),
-        hovertemplate='<b>%{y}</b><br>Count: %{x:,}<extra></extra>',
+        text=percentages,
+        texttemplate='%{text}',  # Use custom text with percentages
+        textposition='inside',  # Position labels inside bars to save space
+        textfont=dict(size=13, family='Inter, sans-serif', weight='bold'),
+        hovertemplate=f'<b>%{{y}}</b><br>Count: %{{x:,}} out of {total:,}<extra></extra>',
         cliponaxis=False  # Don't clip labels outside the plot area
     )
     return fig
@@ -1025,14 +1035,21 @@ def create_status_stacked_bar_chart(df, category_col, title, height=500, max_ite
     df_chart = df_chart.dropna(subset=[category_col])
     df_chart = df_chart[df_chart[category_col] != '']
     
-    # Normalize Status
+    # Normalize Status - only include actual Open/Closed statuses
     def normalize_status(status):
         s = str(status).strip().lower()
         if 'closed' in s or 'resolved' in s:
             return 'Closed'
-        return 'Open'
+        elif 'open' in s:
+            return 'Open'
+        else:
+            # Return None for statuses like 'Received', 'Pending', etc.
+            return None
     
     df_chart['Status_Clean'] = df_chart['Status'].apply(normalize_status)
+    
+    # Filter out records with non-Open/Closed statuses
+    df_chart = df_chart.dropna(subset=['Status_Clean'])
     
     # Get top categories by total count
     top_categories = df_chart[category_col].value_counts().head(max_items).index.tolist()
@@ -1082,36 +1099,54 @@ def create_status_stacked_bar_chart(df, category_col, title, height=500, max_ite
             x=1,
             title=None
         ),
-        margin=dict(l=3, r=70, t=30, b=3),
+        margin=dict(l=3, r=20, t=30, b=3),
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
-        font=dict(family='Inter, sans-serif', size=14, color='#374151'),
+        font=dict(family='Inter, sans-serif', size=13, color='#374151'),
         xaxis=dict(
             showgrid=True,
             gridcolor='#f3f4f6',
             zeroline=False,
-            title_font=dict(size=14),
+            title_font=dict(size=13),
             tickangle=0,
-            tickfont=dict(size=12),
+            tickfont=dict(size=13),
             automargin=True
         ),
         yaxis=dict(
             showgrid=False,
             tickfont=dict(size=13),
             tickangle=0,
-            automargin=True
+            automargin=True,
+            autorange=True,
+            fixedrange=True
         ),
         uniformtext_minsize=8,
         uniformtext_mode='hide',
         barmode='stack'
     )
     
+    # Calculate percentages for each status within each category - only show for 'Closed'
+    for i, trace in enumerate(fig.data):
+        category_totals = df_grouped.groupby(category_col)['Total'].first().to_dict()
+        percentages = []
+        trace_name = trace.name if hasattr(trace, 'name') else ''
+        
+        for j, cat in enumerate(trace.y):
+            total = category_totals[cat]
+            percentage = (trace.x[j] / total * 100) if total > 0 else 0
+            # Only show percentage for 'Closed' status to avoid overlap
+            if 'closed' in trace_name.lower():
+                percentages.append(f"{percentage:.0f}%")
+            else:
+                percentages.append("")
+        trace.text = percentages
+    
     fig.update_traces(
         marker=dict(line=dict(width=0)),
-        texttemplate='%{text:,}',
-        textposition='auto',
-        textfont=dict(size=12, family='Inter, sans-serif', weight='bold'),
-        hovertemplate='<b>%{y}</b><br>%{fullData.name}: %{x:,}<br>Total: %{customdata[0]:,}<extra></extra>'
+        texttemplate='%{text}',
+        textposition='inside',
+        textfont=dict(size=13, family='Inter, sans-serif', weight='bold'),
+        hovertemplate='<b>%{y}</b><br>%{fullData.name}: %{x:,} out of %{customdata[0]:,}<extra></extra>'
     )
     
     return fig
@@ -1184,7 +1219,7 @@ def create_stacked_bar_chart(df, x_col, y_col, color_col, title, height=500):
         hovermode='x unified',
         hoverlabel=dict(
             bgcolor="white",
-            font_size=12,
+            font_size=13,
             font_family="Inter, sans-serif",
             align="left"
         ),
@@ -1201,6 +1236,24 @@ def create_stacked_bar_chart(df, x_col, y_col, color_col, title, height=500):
     fig.update_traces(
         hovertemplate=hovertemplate
     )
+    
+    # Add text annotations showing totals for each month
+    monthly_totals = df.groupby(x_col)[y_col].sum()
+    annotations = []
+    
+    for month, total in monthly_totals.items():
+        annotations.append(
+            dict(
+                x=month,
+                y=total + (total * 0.02),  # Position slightly above the bar
+                text=f"{total:,}",
+                showarrow=False,
+                font=dict(size=13, family='Inter, sans-serif', weight='bold', color='#374151'),
+                xanchor='center'
+            )
+        )
+    
+    fig.update_layout(annotations=annotations)
     
     # Set the hover template for the x-axis to show only the month and year
     fig.update_xaxes(
@@ -1274,8 +1327,8 @@ def create_pie_chart(data, title, height=400, use_ntc_colors=False):
             'PLDT': '#ef4444',      # Red
             'SMART': '#22c55e',     # Green  
             'GLOBE': '#3b82f6',     # Blue
-            'CONVERGE': '#a855f7',  # Purple
-            'Others': '#6b7280'     # Gray for others
+            'CONVERGE': '#7c3aed',  # Darker Purple
+            'Others': '#f97316'     # Orange for others
         }
         
         # Create color list based on the categories in the data
@@ -1309,7 +1362,7 @@ def create_pie_chart(data, title, height=400, use_ntc_colors=False):
     
     fig.update_layout(
         height=height,
-        margin=dict(l=20, r=20, t=20, b=20),
+        margin=dict(l=10, r=10, t=20, b=20),
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
         font=dict(family='Inter, sans-serif', size=14, color='#374151'),
@@ -1325,8 +1378,9 @@ def create_pie_chart(data, title, height=400, use_ntc_colors=False):
     
     fig.update_traces(
         textposition='inside',
-        textinfo='percent+label',
-        hovertemplate='<b>%{label}</b><br>Count: %{value:,}<br>Percentage: %{percent}<extra></extra>',
+        textinfo='label+percent',
+        textfont=dict(size=13, family='Inter, sans-serif', weight='bold'),
+        hovertemplate='<b>%{label}</b><br>Count: %{value:,} out of %{sum:,}<br>Percentage: %{percent}<extra></extra>',
         marker=dict(line=dict(color='#ffffff', width=2))
     )
     
@@ -1551,7 +1605,7 @@ def main():
             if active_url:
                 if spreadsheet_url:  # Only update session state if user provides URL
                     st.session_state.gsheet_url = spreadsheet_url
-                interval = st.session_state.refresh_interval if st.session_state.auto_refresh else 60
+                interval = st.session_state.refresh_interval if st.session_state.auto_refresh else 300
                 current_time = int(datetime.now().timestamp() // interval) * interval
                 df = load_data_from_public_gsheet(active_url, current_time)
                 st.session_state.data_source_type = "gsheets_public"
@@ -1596,7 +1650,7 @@ def main():
             active_url = st.session_state.gsheet_url
 
             if st.session_state.gsheet_creds and active_url:
-                interval = st.session_state.refresh_interval if st.session_state.auto_refresh else 60
+                interval = st.session_state.refresh_interval if st.session_state.auto_refresh else 300
                 current_time = int(datetime.now().timestamp() // interval) * interval
                 df = load_data_from_gsheet_with_auth(st.session_state.gsheet_creds, active_url, current_time)
                 st.session_state.data_source_type = "gsheets_private"
@@ -1619,7 +1673,7 @@ def main():
             if auto_refresh:
                 st.select_slider(
                     "Interval (seconds)", 
-                    options=[30, 60, 120, 300], 
+                    options=[60, 180, 300, 600], 
                     value=st.session_state.refresh_interval,
                     key="refresh_interval_slider",
                     on_change=lambda: st.session_state.update(refresh_interval=st.session_state.refresh_interval_slider)
@@ -1629,15 +1683,15 @@ def main():
             with st.expander("📋 View Data", expanded=False):
                 st.dataframe(df.head(3), width='stretch', height=150)
 
-    # Determine refresh rate for the fragment
-    # If data source is uploaded file, auto-refresh is not needed unless explicitly desired (but file won't change)
-    # For now, we respect the user's auto-refresh setting for all sources
-    refresh_rate = st.session_state.refresh_interval if st.session_state.auto_refresh else None
+    # Determine refresh rate for the fragment (only for Google Sheets)
+    refresh_rate = None
+    if st.session_state.auto_refresh and st.session_state.data_source_type in ["gsheets_public", "gsheets_auth"]:
+        refresh_rate = st.session_state.refresh_interval
 
     @st.fragment(run_every=refresh_rate)
     def render_dashboard_content(initial_df=None):
         # Re-calculate timestamp for cache busting within the fragment
-        interval = st.session_state.refresh_interval if st.session_state.auto_refresh else 60
+        interval = st.session_state.refresh_interval if st.session_state.auto_refresh else 300
         current_time = int(datetime.now().timestamp() // interval) * interval
         
         df = None
