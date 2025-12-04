@@ -228,6 +228,18 @@ PROVIDER_ALIASES = {
     'gogoxpress': 'GoGo Xpress',
     'quadx': 'GoGo Xpress',
     'quadx, inc. d.b.a. gogo xpress': 'GoGo Xpress',
+    
+    # Converge consolidation
+    'converge ict': 'Converge',
+    'converge': 'Converge',
+    
+    # Globe consolidation  
+    'globe': 'Globe Telecom',
+    'globe telecom': 'Globe Telecom',
+    
+    # TNT Express consolidation
+    'tnt express deliveries': 'TNT Express Deliveries (Phils.), Inc.',
+    'tnt express deliveries (phils.), inc.': 'TNT Express Deliveries (Phils.), Inc.',
 }
 
 # Page configuration
@@ -344,6 +356,10 @@ CUSTOM_CSS = """
         font-size: 0.9rem;
         font-weight: 600;
         color: #6b7280;
+    }
+
+    [data-testid="stMetricDelta"] svg {
+        display: none;
     }
 
     div[data-testid="stMetric"] {
@@ -986,9 +1002,9 @@ def create_bar_chart(data_series, title, color_scale='blues', height=500):
     )
     return fig
 
-def create_pie_chart(data_series, title, color_scheme=None, height=500):
-    """Create a modern donut chart with enhanced styling"""
-    if data_series is None or len(data_series) == 0:
+def create_status_stacked_bar_chart(df, category_col, title, height=500, max_items=8, color_theme='blue'):
+    """Create a stacked bar chart split by Status (Closed/Open)"""
+    if df is None or df.empty or category_col not in df.columns or 'Status' not in df.columns:
         # Return empty figure with message
         fig = go.Figure()
         fig.add_annotation(
@@ -1004,49 +1020,193 @@ def create_pie_chart(data_series, title, color_scheme=None, height=500):
         )
         return fig
 
-    # Convert to DataFrame for plotly
-    df_plot = pd.DataFrame({
-        'Category': data_series.index.astype(str),
-        'Count': data_series.values
-    })
-
-    # Default professional color scheme
-    if color_scheme is None:
-        color_scheme = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981',
-                       '#06b6d4', '#6366f1', '#f43f5e', '#84cc16', '#a855f7']
-
-    fig = px.pie(
-        df_plot,
-        values='Count',
-        names='Category',
-        hole=0.45,
-        color_discrete_sequence=color_scheme
+    # Filter and clean data
+    df_chart = df[[category_col, 'Status']].copy()
+    df_chart = df_chart.dropna(subset=[category_col])
+    df_chart = df_chart[df_chart[category_col] != '']
+    
+    # Normalize Status
+    def normalize_status(status):
+        s = str(status).strip().lower()
+        if 'closed' in s or 'resolved' in s:
+            return 'Closed'
+        return 'Open'
+    
+    df_chart['Status_Clean'] = df_chart['Status'].apply(normalize_status)
+    
+    # Get top categories by total count
+    top_categories = df_chart[category_col].value_counts().head(max_items).index.tolist()
+    df_chart = df_chart[df_chart[category_col].isin(top_categories)]
+    
+    # Group by Category and Status
+    df_grouped = df_chart.groupby([category_col, 'Status_Clean']).size().reset_index(name='Count')
+    
+    # Calculate total for sorting and hover
+    df_totals = df_grouped.groupby(category_col)['Count'].sum().reset_index(name='Total')
+    df_grouped = pd.merge(df_grouped, df_totals, on=category_col)
+    
+    # Sort by total
+    df_totals = df_totals.sort_values('Total', ascending=False) # Descending for horizontal bar (top to bottom)
+    category_order = df_totals[category_col].tolist()
+    
+    # Define color maps
+    color_maps = {
+        'blue': {'Closed': '#1e3a8a', 'Open': '#93c5fd'},    # Dark Blue / Light Blue
+        'purple': {'Closed': '#581c87', 'Open': '#d8b4fe'},  # Dark Purple / Light Purple
+        'orange': {'Closed': '#c2410c', 'Open': '#fdba74'}   # Dark Orange / Light Orange
+    }
+    
+    selected_colors = color_maps.get(color_theme, color_maps['blue'])
+    
+    # Create chart
+    fig = px.bar(
+        df_grouped,
+        y=category_col,
+        x='Count',
+        color='Status_Clean',
+        orientation='h',
+        category_orders={category_col: category_order, 'Status_Clean': ['Closed', 'Open']},
+        color_discrete_map=selected_colors,
+        text='Count',
+        custom_data=['Total']
     )
+    
     fig.update_layout(
         height=height,
-        margin=dict(l=3, r=3, t=3, b=3),
+        showlegend=True,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1,
+            title=None
+        ),
+        margin=dict(l=3, r=70, t=30, b=3),
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
         font=dict(family='Inter, sans-serif', size=14, color='#374151'),
-        showlegend=True,
-        legend=dict(
-            orientation="v",
-            yanchor="middle",
-            y=0.5,
-            xanchor="left",
-            x=1.02,
-            font=dict(size=13)
-        )
+        xaxis=dict(
+            showgrid=True,
+            gridcolor='#f3f4f6',
+            zeroline=False,
+            title_font=dict(size=14),
+            tickangle=0,
+            tickfont=dict(size=12),
+            automargin=True
+        ),
+        yaxis=dict(
+            showgrid=False,
+            tickfont=dict(size=13),
+            tickangle=0,
+            automargin=True
+        ),
+        uniformtext_minsize=8,
+        uniformtext_mode='hide',
+        barmode='stack'
     )
+    
     fig.update_traces(
-        textposition='auto',  # Auto position to avoid overlap
-        textinfo='value+percent',  # Show only count and percentage (labels in legend)
-        texttemplate='%{value:,}<br>(%{percent})',  # Format: count (with commas) and percentage
-        textfont=dict(size=11, color='white', family='Inter, sans-serif', weight='bold'),
-        hovertemplate='<b>%{label}</b><br>Count: %{value:,}<br>Percentage: %{percent}<extra></extra>',
-        marker=dict(line=dict(color='white', width=2)),
-        pull=[0.02] * len(data_series)  # Slightly pull slices apart for better visibility
+        marker=dict(line=dict(width=0)),
+        texttemplate='%{text:,}',
+        textposition='auto',
+        textfont=dict(size=12, family='Inter, sans-serif', weight='bold'),
+        hovertemplate='<b>%{y}</b><br>%{fullData.name}: %{x:,}<br>Total: %{customdata[0]:,}<extra></extra>'
     )
+    
+    return fig
+
+def create_stacked_bar_chart(df, x_col, y_col, color_col, title, height=500):
+    """Create a modern stacked bar chart with enhanced styling"""
+    # Check if Breakdown exists for custom data
+    custom_data = ['Breakdown'] if 'Breakdown' in df.columns else None
+    
+    fig = px.bar(
+        df,
+        x=x_col,
+        y=y_col,
+        color=color_col,
+        title=None,
+        labels={x_col: 'Month', y_col: 'Number of Complaints', color_col: 'Type'},
+        color_discrete_sequence=['#3b82f6', '#ef4444', '#eab308', '#22c55e', '#f97316', '#a855f7'],  # Primary & Secondary colors
+        custom_data=custom_data
+    )
+    
+    # Calculate totals for each month to display inside bars
+    monthly_totals = df.groupby(x_col)[y_col].sum().reset_index()
+    monthly_totals.columns = [x_col, 'Total']
+    # Add seamless text annotations showing totals on top of each bar
+    for _, row in monthly_totals.iterrows():
+        fig.add_annotation(
+            x=row[x_col],
+            y=row['Total'],
+            text=str(int(row['Total'])),
+            showarrow=False,
+            font=dict(size=11, color='#6b7280', weight='normal'),
+            bgcolor='rgba(0,0,0,0)',  # Transparent background
+            bordercolor='rgba(0,0,0,0)',  # No border
+            borderwidth=0,
+            borderpad=0,
+            yshift=12  # Position slightly above the bar
+        )
+    
+    fig.update_layout(
+        height=height,
+        margin=dict(l=3, r=3, t=35, b=3),
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        font=dict(family='Inter, sans-serif', size=14, color='#374151'),
+        xaxis=dict(
+            showgrid=False,
+            zeroline=False,
+            title=None,
+            tickfont=dict(size=12),
+            tickangle=0,
+            automargin=True
+        ),
+        yaxis=dict(
+            showgrid=True,
+            gridcolor='#f3f4f6',
+            zeroline=False,
+            title='Complaints',
+            title_font=dict(size=13),
+            tickfont=dict(size=12),
+            tickangle=0,
+            automargin=True
+        ),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        ),
+        hovermode='x unified',
+        hoverlabel=dict(
+            bgcolor="white",
+            font_size=12,
+            font_family="Inter, sans-serif",
+            align="left"
+        ),
+        uniformtext_minsize=8,
+        uniformtext_mode='hide'
+    )
+    
+    # Update traces with conditional hover template
+    if custom_data:
+        hovertemplate = '<b>%{fullData.name}</b><br>Count: %{y:,}<br>%{customdata[0]}<extra></extra>'
+    else:
+        hovertemplate = '<b>%{fullData.name}</b><br>Count: %{y:,}<extra></extra>'
+        
+    fig.update_traces(
+        hovertemplate=hovertemplate
+    )
+    
+    # Set the hover template for the x-axis to show only the month and year
+    fig.update_xaxes(
+        hoverformat='%B %Y'
+    )
+    
     return fig
 
 def create_line_chart(df_monthly, height=500):
@@ -1098,8 +1258,151 @@ def create_line_chart(df_monthly, height=500):
     )
     return fig
 
+def create_pie_chart(data, title, height=400, use_ntc_colors=False):
+    """Create a modern pie chart with distinct colors and enhanced hover info"""
+    # Convert Series to DataFrame if needed
+    if isinstance(data, pd.Series):
+        df = data.reset_index()
+        df.columns = ['Category', 'Count']
+    else:
+        df = data
+    
+    # Define custom colors for NTC providers
+    if use_ntc_colors:
+        # Create color mapping for NTC providers (matching get_ntc_group output)
+        ntc_color_map = {
+            'PLDT': '#ef4444',      # Red
+            'SMART': '#22c55e',     # Green  
+            'GLOBE': '#3b82f6',     # Blue
+            'CONVERGE': '#a855f7',  # Purple
+            'Others': '#6b7280'     # Gray for others
+        }
+        
+        # Create color list based on the categories in the data
+        colors = []
+        for category in df['Category']:
+            if category in ntc_color_map:
+                colors.append(ntc_color_map[category])
+            else:
+                colors.append('#6b7280')  # Default gray for unlisted providers
+        
+        color_discrete_map = dict(zip(df['Category'], colors))
+        
+        fig = px.pie(
+            df,
+            values='Count',
+            names='Category',
+            title=None,
+            hole=0.4,  # Donut chart style
+            color='Category',
+            color_discrete_map=color_discrete_map
+        )
+    else:
+        fig = px.pie(
+            df,
+            values='Count',
+            names='Category',
+            title=None,
+            hole=0.4,  # Donut chart style
+            color_discrete_sequence=['#3b82f6', '#ef4444', '#eab308', '#22c55e', '#f97316', '#a855f7']  # Primary & Secondary colors
+        )
+    
+    fig.update_layout(
+        height=height,
+        margin=dict(l=20, r=20, t=20, b=20),
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        font=dict(family='Inter, sans-serif', size=14, color='#374151'),
+        showlegend=True,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=-0.2,
+            xanchor="center",
+            x=0.5
+        )
+    )
+    
+    fig.update_traces(
+        textposition='inside',
+        textinfo='percent+label',
+        hovertemplate='<b>%{label}</b><br>Count: %{value:,}<br>Percentage: %{percent}<extra></extra>',
+        marker=dict(line=dict(color='#ffffff', width=2))
+    )
+    
+    return fig
+
+def consolidate_provider_name(provider_name):
+    """Consolidate provider names to handle duplicates and variations"""
+    if pd.isna(provider_name) or provider_name == '':
+        return provider_name
+    
+    provider_lower = str(provider_name).lower().strip()
+    
+    # Converge consolidation (Converge ICT -> Converge)
+    if 'converge' in provider_lower:
+        return 'Converge'
+    
+    # Globe consolidation (Globe -> Globe Telecom)
+    elif 'globe' in provider_lower and 'telecom' not in provider_lower:
+        return 'Globe Telecom'
+    
+    # TNT Express consolidation
+    elif 'tnt express' in provider_lower:
+        return 'TNT Express Deliveries (Phils.), Inc.'
+    
+    # Return original if no consolidation needed
+    else:
+        return provider_name
+
+def get_ntc_group(provider):
+    """Group NTC providers into main categories (Case Insensitive)"""
+    if not isinstance(provider, str):
+        return "Others"
+    
+    # First consolidate the provider name
+    consolidated_name = consolidate_provider_name(provider)
+    p = consolidated_name.strip().upper()
+    
+    # PLDT Group
+    if any(x in p for x in ["PLDT", "CIGNAL"]):
+        return "PLDT"
+        
+    # SMART Group
+    if any(x in p for x in ["SMART", "SUN", "TNT", "REDFIBER", "RED FIBER"]):
+        return "SMART"
+        
+    # GLOBE Group
+    if any(x in p for x in ["GLOBE", "TM", "GOMO"]):
+        return "GLOBE"
+        
+    # CONVERGE Group
+    if any(x in p for x in ["CONVERGE", "SURF 2 SAWA", "SURF2SAWA", "BIDA FIBER", "BIDAFIBER", "SKY"]):
+        return "CONVERGE"
+        
+    return "Others"
+
 def render_comparison_charts(df_period1, df_period3, period1_label, period3_label, color_theme1, color_theme2, key_prefix):
     """Render side-by-side service provider charts for comparison"""
+    
+    # Helper to process data based on key_prefix
+    def process_provider_data(df, apply_grouping=True):
+        if 'Service Providers' in df.columns and len(df) > 0:
+            valid_data = df['Service Providers'].dropna()
+            valid_data = valid_data[valid_data != '']
+            
+            if len(valid_data) > 0:
+                # Always consolidate provider names first
+                consolidated_data = valid_data.apply(consolidate_provider_name)
+                
+                # Apply NTC grouping if applicable AND requested
+                if key_prefix == "ntc_providers" and apply_grouping:
+                    grouped_data = consolidated_data.apply(get_ntc_group)
+                    return grouped_data.value_counts()
+                else:
+                    return consolidated_data.value_counts()
+        return pd.Series()
+
     col1, col2 = st.columns(2)
 
     with col1:
@@ -1107,48 +1410,65 @@ def render_comparison_charts(df_period1, df_period3, period1_label, period3_labe
         if len(df_period1) > 0 and 'Date of Complaint' in df_period1.columns:
             period1_dates = df_period1['Date of Complaint'].dropna()
             if len(period1_dates) > 0:
-                date_range = f"{period1_dates.min().strftime('%b %Y')} - {period1_dates.max().strftime('%b %Y')}"
-                st.caption(f"📅 {date_range}")
+                date_range = f"{period1_dates.min().strftime('%b %d, %Y')} - {period1_dates.max().strftime('%b %d, %Y')}"
+                # st.caption(f"📅 {date_range}") # Removed for redundancy
 
-        if 'Service Providers' in df_period1.columns and len(df_period1) > 0:
-            valid_data = df_period1['Service Providers'].dropna()
-            valid_data = valid_data[valid_data != '']
-
-            if len(valid_data) > 0:
-                provider_counts = valid_data.value_counts().head(12)
-                fig = create_bar_chart(provider_counts, "Service Provider", color_theme1, 400)
-                st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}_period1")
+        # Apply grouping for the main/total chart (Period 1)
+        counts = process_provider_data(df_period1, apply_grouping=True)
+        
+        if not counts.empty:
+            # Top 5 and Others logic (Only applies if NOT NTC grouped, or if NTC groups somehow exceed 5)
+            if len(counts) > 5:
+                top_5 = counts.head(5)
+                others_count = counts.iloc[5:].sum()
+                # Create a new series with Others appended
+                final_counts = pd.concat([top_5, pd.Series({'Others': others_count})])
             else:
-                st.info("📊 No service provider data available")
+                final_counts = counts
+
+            # Use NTC colors if this is NTC analysis
+            use_ntc_colors = (key_prefix == "ntc_providers")
+            fig = create_pie_chart(final_counts, "Service Provider", 400, use_ntc_colors)
+            st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}_period1")
         else:
-            fig = create_bar_chart(pd.Series(), "Service Provider", color_theme1, 400)
+            use_ntc_colors = (key_prefix == "ntc_providers")
+            fig = create_pie_chart(pd.Series(), "Service Provider", 400, use_ntc_colors)
             st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}_period1_empty")
             if 'Service Providers' not in df_period1.columns:
                 st.error("❌ 'Service Providers' column not found")
+            else:
+                st.info("📊 No service provider data available")
 
     with col2:
         st.markdown(f"#### Service Providers ({period3_label})")
-        if len(df_period3) > 0 and 'Date of Complaint' in df_period3.columns:
-            period3_dates = df_period3['Date of Complaint'].dropna()
-            if len(period3_dates) > 0:
-                date_range = f"{period3_dates.min().strftime('%b %Y')} - {period3_dates.max().strftime('%b %Y')}"
-                st.caption(f"📅 {date_range}")
-
-        if 'Service Providers' in df_period3.columns and len(df_period3) > 0:
-            valid_data = df_period3['Service Providers'].dropna()
-            valid_data = valid_data[valid_data != '']
-
-            if len(valid_data) > 0:
-                provider_counts = valid_data.value_counts().head(12)
-                fig = create_bar_chart(provider_counts, "Service Provider", color_theme2, 400)
-                st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}_period3")
+        
+        # The new stacked bar chart for the recent period
+        if not df_period3.empty and 'Service Providers' in df_period3.columns:
+            # Create a copy and consolidate provider names
+            df_period3_consolidated = df_period3.copy()
+            df_period3_consolidated['Service Providers'] = df_period3_consolidated['Service Providers'].apply(consolidate_provider_name)
+            
+            # Use the status stacked bar chart function
+            fig = create_status_stacked_bar_chart(
+                df_period3_consolidated, 
+                'Service Providers', 
+                "Recent Service Providers", 
+                height=400, 
+                max_items=12, 
+                color_theme=color_theme2
+            )
+            if fig:
+                st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}_period3_stacked")
             else:
-                st.info("📊 No service provider data available")
+                st.info("📊 No service provider data available for this period.")
         else:
-            fig = create_bar_chart(pd.Series(), "Service Provider", color_theme2, 400)
+            # Fallback for empty data or missing column
+            fig = create_status_stacked_bar_chart(pd.DataFrame(), 'Service Providers', "", 400)
             st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}_period3_empty")
             if 'Service Providers' not in df_period3.columns:
                 st.error("❌ 'Service Providers' column not found")
+            else:
+                st.info("📊 No service provider data available")
 
 def main():
     # Initialize session state FIRST - before any other code
@@ -1417,7 +1737,7 @@ def main():
                 # Create filtered datasets
                 try:
                     df_period1 = df[df['Date of Complaint'] >= ytd_start].copy()
-                    period1_label = f"{ytd_start.strftime('%b %Y')} - Present"
+                    period1_label = f"{ytd_start.strftime('%b %d, %Y')} - {max_date.strftime('%b %d, %Y')}"
                     period1_short = "YTD"
                 except:
                     df_period1 = df.copy()
@@ -1426,7 +1746,7 @@ def main():
 
                 try:
                     df_period2 = df[df['Date of Complaint'] >= last_quarter_start].copy()
-                    period2_label = f"Last 3 Months ({last_quarter_start.strftime('%b %Y')} - Present)"
+                    period2_label = f"{last_quarter_start.strftime('%b %d, %Y')} - {max_date.strftime('%b %d, %Y')}"
                     period2_short = "3M"
                 except:
                     df_period2 = df.copy()
@@ -1435,7 +1755,7 @@ def main():
 
                 try:
                     df_period3 = df[df['Date of Complaint'] >= last_month_start].copy()
-                    period3_label = f"Last Month ({last_month_start.strftime('%b %Y')} - Present)"
+                    period3_label = f"{last_month_start.strftime('%b %d, %Y')} - {max_date.strftime('%b %d, %Y')}"
                     period3_short = "1M"
                 except:
                     df_period3 = df.copy()
@@ -1476,44 +1796,37 @@ def main():
             period2_count = len(df_period2)
             delta_count = period1_count - period2_count
             st.metric(
-                label=f"{period1_label}",
+                label=f"Total Complaints ({period1_short})",
                 value=f"{period1_count:,}",
-                delta=f"{delta_count:+,} vs {period2_short}",
-                delta_color="inverse",
-                help=f"Total complaints for {period1_label}"
+                delta="100% of Total",
+                delta_color="off",
+                help=f"Total number of complaints received during {period1_label}"
             )
 
         with col2:
             period2_count = len(df_period2)
             period2_pct = (period2_count / period1_count * 100) if period1_count > 0 else 0
             st.metric(
-                label=f"{period2_label}",
+                label=f"Recent Complaints ({period2_short})",
                 value=f"{period2_count:,}",
-                delta=f"{period2_pct:.1f}% of {period1_short}",
+                delta=f"{period2_pct:.1f}% of Total",
                 delta_color="off",
-                help=f"Total complaints for {period2_label}"
+                help=f"Total number of complaints received during {period2_label}"
             )
 
         with col3:
-            if 'Agency' in df_period1.columns:
+            if 'Complaint Category' in df_period1.columns:
                 try:
-                    ntc_mask = df_period1['Agency'].apply(is_ntc_complaint)
-                    if 'Complaint Category' in df_period1.columns:
-                        ntc_mask = ntc_mask | (df_period1['Complaint Category'].astype(str).str.strip().str.upper() == "TELCO INTERNET ISSUES")
-                    
-                    # Exclude PEMEDES providers from NTC count
-                    if 'Service Providers' in df_period1.columns:
-                        pemedes_mask_excl = df_period1['Service Providers'].apply(is_pemedes_provider)
-                        ntc_mask = ntc_mask & (~pemedes_mask_excl)
-
+                    # Use ONLY Telco Internet Issues category for exact match with category counts
+                    ntc_mask = (df_period1['Complaint Category'].astype(str).str.strip().str.upper() == "TELCO INTERNET ISSUES")
                     ntc_count = len(df_period1[ntc_mask])
                     ntc_pct = (ntc_count / period1_count * 100) if period1_count > 0 else 0
                     st.metric(
-                        label="NTC Complaints",
+                        label=f"NTC Complaints ({period1_short})",
                         value=f"{ntc_count:,}",
-                        delta=f"{ntc_pct:.1f}% of total",
+                        delta=f"{ntc_pct:.1f}% of Total",
                         delta_color="off",
-                        help="National Telecommunications Commission complaints"
+                        help=f"Includes Telco Internet Issues and NTC Agency complaints during {period1_label}"
                     )
                 except Exception as e:
                     st.metric("NTC Complaints", "Error")
@@ -1522,27 +1835,19 @@ def main():
                 st.metric("NTC Complaints", "N/A")
 
         with col4:
-            if 'Service Providers' in df_period1.columns:
+            if 'Complaint Category' in df_period1.columns:
                 try:
-                    # Count PEMEDES complaints (providers OR "Delivery Concerns (SP)" OR Agency="PRD")
-                    pemedes_mask = df_period1['Service Providers'].apply(is_pemedes_provider)
-                    if 'Complaint Category' in df_period1.columns:
-                        pemedes_mask = pemedes_mask | (df_period1['Complaint Category'].astype(str).str.strip().str.upper() == "DELIVERY CONCERNS (SP)")
-                    if 'Agency' in df_period1.columns:
-                        pemedes_mask = pemedes_mask | (df_period1['Agency'].astype(str).str.strip().str.upper() == "PRD")
+                    # Count PEMEDES complaints (Strictly "Delivery Concerns (SP)")
+                    pemedes_mask = (df_period1['Complaint Category'].astype(str).str.strip().str.upper() == "DELIVERY CONCERNS (SP)")
                     
-                    # Exclude NTC providers from PEMEDES count
-                    ntc_provider_mask = df_period1['Service Providers'].apply(is_ntc_provider)
-                    pemedes_mask = pemedes_mask & (~ntc_provider_mask)
-
                     pemedes_count = len(df_period1[pemedes_mask])
                     pemedes_pct = (pemedes_count / period1_count * 100) if period1_count > 0 else 0
                     st.metric(
-                        label="PEMEDES Resolved Complaints",
+                        label=f"PEMEDES Complaints ({period1_short})",
                         value=f"{pemedes_count:,}",
-                        delta=f"{pemedes_pct:.1f}% of total",
+                        delta=f"{pemedes_pct:.1f}% of Total",
                         delta_color="off",
-                        help="Complaints from PEMEDES service providers, Delivery Concerns (SP), or Agency PRD"
+                        help=f"Complaints categorized as Delivery Concerns (SP) during {period1_label}"
                     )
                 except Exception as e:
                     st.metric("PEMEDES Resolved Complaints", "Error")
@@ -1559,11 +1864,9 @@ def main():
         with col1:
             st.markdown(f"#### Complaints by Category ({period1_label})")
             if 'Complaint Category' in df_period1.columns:
-                valid_data = df_period1['Complaint Category'].dropna()
-                valid_data = valid_data[valid_data != '']
-                if len(valid_data) > 0:
-                    category_counts = valid_data.value_counts().head(8)
-                    fig = create_bar_chart(category_counts, "Category", 'blues', chart_height)
+                # Use new stacked bar chart function
+                fig = create_status_stacked_bar_chart(df_period1, 'Complaint Category', "Category", chart_height, color_theme='blue')
+                if fig:
                     st.plotly_chart(fig, use_container_width=True, key="overall_category")
                 else:
                     st.info("No category data available")
@@ -1573,11 +1876,9 @@ def main():
         with col2:
             st.markdown(f"#### Complaints by Nature ({period1_label})")
             if 'Complaint Nature' in df_period1.columns:
-                valid_data = df_period1['Complaint Nature'].dropna()
-                valid_data = valid_data[valid_data != '']
-                if len(valid_data) > 0:
-                    nature_counts = valid_data.value_counts().head(8)
-                    fig = create_bar_chart(nature_counts, "Nature", 'purples', chart_height)
+                # Use new stacked bar chart function
+                fig = create_status_stacked_bar_chart(df_period1, 'Complaint Nature', "Nature", chart_height, color_theme='purple')
+                if fig:
                     st.plotly_chart(fig, use_container_width=True, key="overall_nature")
                 else:
                     st.info("No nature data available")
@@ -1587,11 +1888,13 @@ def main():
         # Row 2: DICT Unit
         st.markdown(f"#### Complaints by DICT Unit ({period1_label})")
         if 'DICT UNIT' in df_period1.columns:
-            valid_data = df_period1['DICT UNIT'].dropna()
-            valid_data = valid_data[valid_data != '']
-            if len(valid_data) > 0:
-                unit_counts = valid_data.value_counts().head(10)
-                fig = create_bar_chart(unit_counts, "DICT Unit", 'oranges', chart_height)
+            # Filter out NTC first
+            df_unit = df_period1.copy()
+            df_unit = df_unit[~df_unit['DICT UNIT'].astype(str).str.upper().isin(['NTC', 'NATIONAL TELECOMMUNICATIONS COMMISSION'])]
+            
+            # Use new stacked bar chart function
+            fig = create_status_stacked_bar_chart(df_unit, 'DICT UNIT', "DICT Unit", chart_height, max_items=10, color_theme='orange')
+            if fig:
                 st.plotly_chart(fig, use_container_width=True, key="overall_dict_unit")
             else:
                 st.info("No DICT Unit data available")
@@ -1603,13 +1906,62 @@ def main():
         if 'Date of Complaint' in df_period1.columns:
             valid_dates = df_period1['Date of Complaint'].dropna()
             if len(valid_dates) > 0:
-                monthly_data = df_period1.groupby(df_period1['Date of Complaint'].dt.to_period('M')).size()
+                # Create a copy for manipulation
+                df_trend = df_period1.copy()
+                
+                # Categorize complaints for stacking
+                def get_complaint_type(row):
+                    category = str(row.get('Complaint Category', '')).strip().upper()
+                    
+                    # Check PEMEDES (Strictly Delivery Concerns)
+                    if category == "DELIVERY CONCERNS (SP)":
+                        return 'PEMEDES'
+                        
+                    # Check NTC
+                    is_ntc = is_ntc_complaint(row.get('Agency', ''))
+                    if category == "TELCO INTERNET ISSUES":
+                        is_ntc = True
+                    if is_ntc:
+                        return 'NTC'
+
+                    # Check Cyber-Related
+                    if category == "CYBER-RELATED COMPLAINTS":
+                        return 'Cyber-Related'
+                        
+                    # Check EGOV
+                    if category == "EGOV SERVICES":
+                        return 'EGOV'
+                        
+                    # Fallback
+                    return 'Other'
+
+                df_trend['Type'] = df_trend.apply(get_complaint_type, axis=1)
+                
+                # Group by Month and Type
+                # We need to preserve the Month object for grouping, then convert to string for plotting
+                df_trend['MonthPeriod'] = df_trend['Date of Complaint'].dt.to_period('M')
+                
+                monthly_data = df_trend.groupby(['MonthPeriod', 'Type']).size().reset_index(name='Count')
+                monthly_data['Month'] = monthly_data['MonthPeriod'].astype(str)
+                
+                # Add breakdown info for hover
+                def get_breakdown(row):
+                    if row['Type'] == 'Other':
+                        # Filter for this month and type
+                        mask = (df_trend['MonthPeriod'] == row['MonthPeriod']) & (df_trend['Type'] == 'Other')
+                        subset = df_trend[mask]
+                        if 'Complaint Category' in subset.columns:
+                            counts = subset['Complaint Category'].value_counts().head(3)
+                            # Format: "Category: Count"
+                            items = [f"{cat}: {count}" for cat, count in counts.items()]
+                            if items:
+                                return "Top Issues:<br>" + "<br>".join(items)
+                    return ""
+
+                monthly_data['Breakdown'] = monthly_data.apply(get_breakdown, axis=1)
+                
                 if len(monthly_data) > 0:
-                    df_monthly = pd.DataFrame({
-                        'Month': monthly_data.index.astype(str),
-                        'Count': monthly_data.values
-                    })
-                    fig = create_line_chart(df_monthly, 350)
+                    fig = create_stacked_bar_chart(monthly_data, 'Month', 'Count', 'Type', "Monthly Trend", 350)
                     st.plotly_chart(fig, use_container_width=True, key="overall_monthly_trend")
                 else:
                     st.info("No monthly data available")
@@ -1624,38 +1976,21 @@ def main():
         st.markdown("### NTC Analysis")
 
         # Filter NTC data with error handling
-        if 'Agency' in df_period1.columns:
+        if 'Complaint Category' in df_period1.columns:
             try:
-                # Use the is_ntc_complaint function for consistent filtering
-                # Also include "Telco Internet Issues" from Complaint Category
-                ntc_mask_period1 = df_period1['Agency'].apply(is_ntc_complaint)
-                if 'Complaint Category' in df_period1.columns:
-                    ntc_mask_period1 = ntc_mask_period1 | (df_period1['Complaint Category'].astype(str).str.strip().str.upper() == "TELCO INTERNET ISSUES")
-                
-                # Exclude PEMEDES providers from NTC count
-                if 'Service Providers' in df_period1.columns:
-                    pemedes_mask_excl1 = df_period1['Service Providers'].apply(is_pemedes_provider)
-                    ntc_mask_period1 = ntc_mask_period1 & (~pemedes_mask_excl1)
-
+                # Use ONLY Telco Internet Issues category for exact match with dashboard metrics
+                ntc_mask_period1 = (df_period1['Complaint Category'].astype(str).str.strip().str.upper() == "TELCO INTERNET ISSUES")
                 df_ntc_period1 = df_period1[ntc_mask_period1]
 
-                ntc_mask_period3 = df_period3['Agency'].apply(is_ntc_complaint)
-                if 'Complaint Category' in df_period3.columns:
-                    ntc_mask_period3 = ntc_mask_period3 | (df_period3['Complaint Category'].astype(str).str.strip().str.upper() == "TELCO INTERNET ISSUES")
-                
-                # Exclude PEMEDES providers from NTC count
-                if 'Service Providers' in df_period3.columns:
-                    pemedes_mask_excl3 = df_period3['Service Providers'].apply(is_pemedes_provider)
-                    ntc_mask_period3 = ntc_mask_period3 & (~pemedes_mask_excl3)
-
+                ntc_mask_period3 = (df_period3['Complaint Category'].astype(str).str.strip().str.upper() == "TELCO INTERNET ISSUES")
                 df_ntc_period3 = df_period3[ntc_mask_period3]
 
                 # Data integrity check
                 if len(df_ntc_period1) == 0:
                     st.warning(f"⚠️ No NTC complaints found in {period1_label} dataset. This may indicate:")
-                    st.write("• Agency column doesn't contain 'NTC'")
+                    st.write("• No 'Telco Internet Issues' in Complaint Category")
                     st.write("• No NTC-related complaints in this period")
-                    st.write("• Check the 'Agency' column format")
+                    st.write("• Check the 'Complaint Category' column format")
             except Exception as e:
                 st.error(f"❌ Error filtering NTC data: {str(e)}")
                 st.info("Please check if the 'Agency' column contains valid text data.")
@@ -1668,21 +2003,21 @@ def main():
                 ntc_period1_count = len(df_ntc_period1)
                 ntc_period1_pct = (ntc_period1_count / len(df_period1) * 100) if len(df_period1) > 0 else 0
                 st.metric(
-                    label=f"NTC ({period1_label})",
+                    label=f"NTC Complaints ({period1_short})",
                     value=f"{ntc_period1_count:,}",
-                    delta=f"{ntc_period1_pct:.1f}% of all complaints",
+                    delta=f"{ntc_period1_pct:.1f}% of Total",
                     delta_color="off",
-                    help=f"NTC complaints for {period1_label}"
+                    help=f"NTC complaints during {period1_label}"
                 )
             with kpi_col2:
                 ntc_period3_count = len(df_ntc_period3)
                 ntc_period3_pct = (ntc_period3_count / len(df_period3) * 100) if len(df_period3) > 0 else 0
                 st.metric(
-                    label=f"NTC ({period3_label})",
+                    label=f"NTC Complaints ({period3_short})",
                     value=f"{ntc_period3_count:,}",
-                    delta=f"{ntc_period3_pct:.1f}% of all complaints",
+                    delta=f"{ntc_period3_pct:.1f}% of Total",
                     delta_color="off",
-                    help=f"NTC complaints for {period3_label}"
+                    help=f"NTC complaints during {period3_label}"
                 )
 
             st.markdown("---")
@@ -1691,12 +2026,12 @@ def main():
             render_comparison_charts(
                 df_ntc_period1, df_ntc_period3, 
                 period1_label, period3_label, 
-                'greens', 'teal', 
+                'greens', 'purple', 
                 "ntc_providers"
             )
         else:
-            st.error("❌ 'Agency' column not found in data. Cannot filter NTC complaints.")
-            st.info("💡 Please ensure your data has an 'Agency' column.")
+            st.error("❌ 'Complaint Category' column not found in data. Cannot filter NTC complaints.")
+            st.info("💡 Please ensure your data has a 'Complaint Category' column with 'Telco Internet Issues' entries.")
 
         st.markdown("---")
 
@@ -1704,44 +2039,39 @@ def main():
         st.markdown("### PEMEDES Analysis")
 
         # Filter PEMEDES data with error handling
-        if 'Service Providers' in df_period1.columns:
+        if 'Complaint Category' in df_period1.columns:
             try:
-                # Filter by checking if Service Provider is in PEMEDES_PROVIDERS list
-                # OR if Complaint Category is "Delivery Concerns (SP)"
-                # OR if Agency is "PRD"
-                pemedes_mask_period1 = df_period1['Service Providers'].apply(is_pemedes_provider)
-                if 'Complaint Category' in df_period1.columns:
-                    pemedes_mask_period1 = pemedes_mask_period1 | (df_period1['Complaint Category'].astype(str).str.strip().str.upper() == "DELIVERY CONCERNS (SP)")
-                if 'Agency' in df_period1.columns:
-                    pemedes_mask_period1 = pemedes_mask_period1 | (df_period1['Agency'].astype(str).str.strip().str.upper() == "PRD")
+                # Primary filter: Complaint Category is "Delivery Concerns (SP)"
+                pemedes_mask_period1 = (df_period1['Complaint Category'].astype(str).str.strip().str.upper() == "DELIVERY CONCERNS (SP)")
+                df_pemedes_temp1 = df_period1[pemedes_mask_period1]
                 
-                # Exclude NTC providers from PEMEDES count
-                ntc_provider_mask1 = df_period1['Service Providers'].apply(is_ntc_provider)
-                pemedes_mask_period1 = pemedes_mask_period1 & (~ntc_provider_mask1)
+                # Additional filter: Exclude NTC providers that might be miscategorized
+                if 'Service Providers' in df_pemedes_temp1.columns:
+                    ntc_provider_mask1 = df_pemedes_temp1['Service Providers'].apply(
+                        lambda x: not is_ntc_provider(x) if pd.notna(x) else True
+                    )
+                    df_pemedes_period1 = df_pemedes_temp1[ntc_provider_mask1]
+                else:
+                    df_pemedes_period1 = df_pemedes_temp1
 
-                df_pemedes_period1 = df_period1[pemedes_mask_period1]
-
-                pemedes_mask_period3 = df_period3['Service Providers'].apply(is_pemedes_provider)
-                if 'Complaint Category' in df_period3.columns:
-                    pemedes_mask_period3 = pemedes_mask_period3 | (df_period3['Complaint Category'].astype(str).str.strip().str.upper() == "DELIVERY CONCERNS (SP)")
-                if 'Agency' in df_period3.columns:
-                    pemedes_mask_period3 = pemedes_mask_period3 | (df_period3['Agency'].astype(str).str.strip().str.upper() == "PRD")
+                # Same filtering for period 3
+                pemedes_mask_period3 = (df_period3['Complaint Category'].astype(str).str.strip().str.upper() == "DELIVERY CONCERNS (SP)")
+                df_pemedes_temp3 = df_period3[pemedes_mask_period3]
                 
-                # Exclude NTC providers from PEMEDES count
-                ntc_provider_mask3 = df_period3['Service Providers'].apply(is_ntc_provider)
-                pemedes_mask_period3 = pemedes_mask_period3 & (~ntc_provider_mask3)
-
-                df_pemedes_period3 = df_period3[pemedes_mask_period3]
+                if 'Service Providers' in df_pemedes_temp3.columns:
+                    ntc_provider_mask3 = df_pemedes_temp3['Service Providers'].apply(
+                        lambda x: not is_ntc_provider(x) if pd.notna(x) else True
+                    )
+                    df_pemedes_period3 = df_pemedes_temp3[ntc_provider_mask3]
+                else:
+                    df_pemedes_period3 = df_pemedes_temp3
 
                 # Data integrity check
                 if len(df_pemedes_period1) == 0:
                     st.warning(f"⚠️ No PEMEDES resolved complaints found in {period1_label} dataset. This may indicate:")
-                    st.write("• Service provider names don't match the PEMEDES provider list")
-                    st.write("• No PEMEDES-related complaints in this period")
-                    st.write("• Check the 'Service Providers' column format")
+                    st.write("• No complaints categorized as 'Delivery Concerns (SP)' in this period")
             except Exception as e:
                 st.error(f"❌ Error filtering PEMEDES data: {str(e)}")
-                st.info("Please check if the 'Service Providers' column contains valid text data.")
                 df_pemedes_period1 = pd.DataFrame()
                 df_pemedes_period3 = pd.DataFrame()
 
@@ -1751,21 +2081,21 @@ def main():
                 pemedes_period1_count = len(df_pemedes_period1)
                 pemedes_period1_pct = (pemedes_period1_count / len(df_period1) * 100) if len(df_period1) > 0 else 0
                 st.metric(
-                    label=f"PEMEDES ({period1_label})",
+                    label=f"PEMEDES Complaints ({period1_short})",
                     value=f"{pemedes_period1_count:,}",
-                    delta=f"{pemedes_period1_pct:.1f}% of all complaints",
+                    delta=f"{pemedes_period1_pct:.1f}% of Total",
                     delta_color="off",
-                    help=f"PEMEDES resolved complaints for {period1_label}"
+                    help=f"PEMEDES resolved complaints during {period1_label}"
                 )
             with kpi_col2:
                 pemedes_period3_count = len(df_pemedes_period3)
                 pemedes_period3_pct = (pemedes_period3_count / len(df_period3) * 100) if len(df_period3) > 0 else 0
                 st.metric(
-                    label=f"PEMEDES ({period3_label})",
+                    label=f"PEMEDES Complaints ({period3_short})",
                     value=f"{pemedes_period3_count:,}",
-                    delta=f"{pemedes_period3_pct:.1f}% of all complaints",
+                    delta=f"{pemedes_period3_pct:.1f}% of Total",
                     delta_color="off",
-                    help=f"PEMEDES resolved complaints for {period3_label}"
+                    help=f"PEMEDES resolved complaints during {period3_label}"
                 )
 
             st.markdown("---")
@@ -1774,12 +2104,11 @@ def main():
             render_comparison_charts(
                 df_pemedes_period1, df_pemedes_period3, 
                 period1_label, period3_label, 
-                'purples', 'magenta', 
+                'purples', 'blue', 
                 "pemedes_providers"
             )
         else:
-            st.error("❌ 'Service Providers' column not found in data. Cannot filter PEMEDES resolved complaints.")
-            st.info("💡 Please ensure your data has a 'Service Providers' column with PEMEDES provider names.")
+            st.error("❌ 'Complaint Category' column not found in data. Cannot filter PEMEDES resolved complaints.")
 
         # Display data processing warnings at the bottom
         if data_warnings:
@@ -1824,20 +2153,21 @@ def main():
                     ntc_count = len(df_period1[ntc_mask])
                     st.write(f"NTC: {ntc_count:,} ({(ntc_count/len(df_period1)*100):.1f}%)")
 
-                if 'Service Providers' in df_period1.columns:
-                    # Use consistent PEMEDES filter
-                    pemedes_mask = df_period1['Service Providers'].apply(is_pemedes_provider)
-                    if 'Complaint Category' in df_period1.columns:
-                        pemedes_mask = pemedes_mask | (df_period1['Complaint Category'].astype(str).str.strip().str.upper() == "DELIVERY CONCERNS (SP)")
-                    if 'Agency' in df_period1.columns:
-                        pemedes_mask = pemedes_mask | (df_period1['Agency'].astype(str).str.strip().str.upper() == "PRD")
+                if 'Complaint Category' in df_period1.columns:
+                    # PEMEDES filter with NTC provider exclusion
+                    pemedes_mask = (df_period1['Complaint Category'].astype(str).str.strip().str.upper() == "DELIVERY CONCERNS (SP)")
+                    df_pemedes_temp = df_period1[pemedes_mask]
                     
-                    # Exclude NTC providers from PEMEDES count
-                    ntc_provider_mask = df_period1['Service Providers'].apply(is_ntc_provider)
-                    pemedes_mask = pemedes_mask & (~ntc_provider_mask)
-
-                    pem_count = len(df_period1[pemedes_mask])
-                   
+                    # Exclude NTC providers that might be miscategorized
+                    if 'Service Providers' in df_pemedes_temp.columns:
+                        ntc_provider_mask = df_pemedes_temp['Service Providers'].apply(
+                            lambda x: not is_ntc_provider(x) if pd.notna(x) else True
+                        )
+                        df_pemedes_filtered = df_pemedes_temp[ntc_provider_mask]
+                    else:
+                        df_pemedes_filtered = df_pemedes_temp
+                    
+                    pem_count = len(df_pemedes_filtered)
                     st.write(f"PEMEDES: {pem_count:,} ({(pem_count/len(df_period1)*100):.1f}%)")
 
             with integrity_col2:
