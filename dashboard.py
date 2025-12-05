@@ -1007,7 +1007,7 @@ def create_bar_chart(data_series, title, color_scale='blues', height=500):
         texttemplate='%{text}',  # Use custom text with percentages
         textposition='inside',  # Position labels inside bars to save space
         textfont=dict(size=13, family='Inter, sans-serif', weight='bold'),
-        hovertemplate=f'<b>%{{y}}</b><br>Count: %{{x:,}} out of {total:,}<extra></extra>',
+        hovertemplate=f'<b>%{{y}}</b><br>Count: %{{x:,}} out of {total:,}<br>Percentage: %{{text}}<extra></extra>',
         cliponaxis=False  # Don't clip labels outside the plot area
     )
     return fig
@@ -1075,6 +1075,9 @@ def create_status_stacked_bar_chart(df, category_col, title, height=500, max_ite
     
     selected_colors = color_maps.get(color_theme, color_maps['blue'])
     
+    # Calculate percentages for hover and text
+    df_grouped['Percentage'] = (df_grouped['Count'] / df_grouped['Total'] * 100)
+    
     # Create chart
     fig = px.bar(
         df_grouped,
@@ -1085,7 +1088,7 @@ def create_status_stacked_bar_chart(df, category_col, title, height=500, max_ite
         category_orders={category_col: category_order, 'Status_Clean': ['Closed', 'Open']},
         color_discrete_map=selected_colors,
         text='Count',
-        custom_data=['Total']
+        custom_data=['Total', 'Percentage']
     )
     
     fig.update_layout(
@@ -1146,7 +1149,12 @@ def create_status_stacked_bar_chart(df, category_col, title, height=500, max_ite
         texttemplate='%{text}',
         textposition='inside',
         textfont=dict(size=13, family='Inter, sans-serif', weight='bold'),
-        hovertemplate='<b>%{y}</b><br>%{fullData.name}: %{x:,} out of %{customdata[0]:,}<extra></extra>'
+        hovertemplate=(
+            '<b>%{y}</b><br><br>' +
+            '%{fullData.name}: %{x:,} (%{customdata[1]:.1f}%)<br>' +
+            'Total: %{customdata[0]:,}' +
+            '<extra></extra>'
+        )
     )
     
     return fig
@@ -1306,7 +1314,7 @@ def create_line_chart(df_monthly, height=500):
         textposition='top center',  # Position labels above points
         texttemplate='%{text:,}',  # Format numbers with commas
         textfont=dict(size=10, color='#1f2937', family='Inter, sans-serif', weight='bold'),
-        hovertemplate='<b>%{y:,}</b> complaints<extra></extra>',
+        hovertemplate='<b>%{x}</b><br>Complaints: %{y:,}<extra></extra>',
         cliponaxis=False  # Don't clip labels outside the plot area
     )
     return fig
@@ -1376,11 +1384,14 @@ def create_pie_chart(data, title, height=400, use_ntc_colors=False):
         )
     )
     
+    # Calculate total for hover display
+    total_count = df['Count'].sum() if not df.empty else 0
+    
     fig.update_traces(
         textposition='inside',
         textinfo='label+percent',
         textfont=dict(size=13, family='Inter, sans-serif', weight='bold'),
-        hovertemplate='<b>%{label}</b><br>Count: %{value:,} out of %{sum:,}<br>Percentage: %{percent}<extra></extra>',
+        hovertemplate=f'<b>%{{label}}</b><br>Count: %{{value:,}} out of {total_count:,}<br>Percentage: %{{percent}}<extra></extra>',
         marker=dict(line=dict(color='#ffffff', width=2))
     )
     
