@@ -16,7 +16,7 @@ import ai_reports  # Import the new AI module
 # Column mapping
 COLUMN_LABELS = {
     'A': 'ID', 'B': 'Status', 'C': 'Assigned To', 'D': 'Delivery Channels',
-    'E': 'Date of Complaint', 'F': 'Resolution', 'G': 'Customer Name',
+    'E': 'Date Received', 'F': 'Resolution', 'G': 'Customer Name',
     'H': 'Customer Email', 'I': 'Location (if NTC)', 'J': 'Narrative',
     'K': 'Service Providers', 'L': 'Complaint Category', 'M': 'Platform',
     'N': 'Complaint Nature', 'O': 'Priority', 'P': 'Date of Resolution',
@@ -87,6 +87,7 @@ PEMEDES_PROVIDERS = [
     "MTEL Trading & Manpower Services",
     "NGC Enterprises / Nathaniel G Cruz",
     "(Nathaniel G. Cruz Express Service)",
+    "Ninja Van",
     "Ocean Coast Shipping Corp.",
     "Oceanwave Services, Inc.",
     "Pelican Express, Inc. to Cliqnship",
@@ -704,7 +705,7 @@ def validate_required_columns(df):
         return None, []
 
     required_columns = {
-        'Date of Complaint': ['Date of Complaint', 'Complaint Date', 'Date Filed', 'Filing Date'],
+        'Date Received': ['Date Received', 'Date of Complaint', 'Complaint Date', 'Date Filed', 'Filing Date'],
         'Complaint Category': ['Complaint Category', 'Category', 'Type', 'Complaint Type'],
         'Complaint Nature': ['Complaint Nature', 'Nature', 'Nature of Complaint'],
         'Service Providers': ['Service Providers', 'Service Provider', 'Provider', 'ISP'],
@@ -829,7 +830,7 @@ def prepare_data(df):
                         st.write(f"  • For '{col}', did you mean: {', '.join(similar)}?")
 
     # Convert date columns to datetime with robust parsing (silently)
-    date_columns = ['Date of Complaint', 'Date of Resolution', 'Date Responded']
+    date_columns = ['Date Received', 'Date of Resolution', 'Date Responded']
 
     for col in date_columns:
         if col in df.columns:
@@ -837,9 +838,9 @@ def prepare_data(df):
             df[col] = df[col].apply(parse_date_robust)
 
     # Extract year and month for filtering
-    if 'Date of Complaint' in df.columns:
-        df['Year'] = df['Date of Complaint'].dt.year
-        df['Month'] = df['Date of Complaint'].dt.month
+    if 'Date Received' in df.columns:
+        df['Year'] = df['Date Received'].dt.year
+        df['Month'] = df['Date Received'].dt.month
 
     # Clean text columns (remove extra whitespace) and ensure capitalization
     text_columns = ['Agency', 'Service Providers', 'Complaint Category', 'Complaint Nature', 'DICT UNIT']
@@ -872,10 +873,10 @@ def prepare_data(df):
 
         df['Service Providers'] = df['Service Providers'].apply(normalize_provider)
 
-    # Remove rows where Date of Complaint is invalid
-    if 'Date of Complaint' in df.columns:
+    # Remove rows where Date Received is invalid
+    if 'Date Received' in df.columns:
         rows_before = len(df)
-        df = df[df['Date of Complaint'].notna()]
+        df = df[df['Date Received'].notna()]
         rows_after = len(df)
 
         if rows_before > rows_after:
@@ -900,7 +901,7 @@ def filter_by_date(df, start_month, start_year=None):
     if df is None or df.empty:
         return pd.DataFrame()
 
-    if 'Date of Complaint' not in df.columns:
+    if 'Date Received' not in df.columns:
         return df
 
     if start_year is None:
@@ -918,12 +919,12 @@ def filter_by_date(df, start_month, start_year=None):
             return df
 
         start_date = pd.Timestamp(year=start_year, month=start_month, day=1)
-        # Add validation to ensure Date of Complaint column contains valid dates
-        if df['Date of Complaint'].dtype != 'datetime64[ns]':
-            st.warning("Date of Complaint column contains non-datetime values. Attempting conversion...")
-            df['Date of Complaint'] = pd.to_datetime(df['Date of Complaint'], errors='coerce')
+        # Add validation to ensure Date Received column contains valid dates
+        if df['Date Received'].dtype != 'datetime64[ns]':
+            st.warning("Date Received column contains non-datetime values. Attempting conversion...")
+            df['Date Received'] = pd.to_datetime(df['Date Received'], errors='coerce')
 
-        filtered_df = df[df['Date of Complaint'] >= start_date].copy()
+        filtered_df = df[df['Date Received'] >= start_date].copy()
         return filtered_df
     except Exception as e:
         st.error(f"Error filtering by date: {str(e)}")
@@ -1472,8 +1473,8 @@ def render_comparison_charts(df_period1, df_period3, period1_label, period3_labe
 
     with col1:
         st.markdown(f"#### Service Providers ({period1_label})")
-        if len(df_period1) > 0 and 'Date of Complaint' in df_period1.columns:
-            period1_dates = df_period1['Date of Complaint'].dropna()
+        if len(df_period1) > 0 and 'Date Received' in df_period1.columns:
+            period1_dates = df_period1['Date Received'].dropna()
             if len(period1_dates) > 0:
                 date_range = f"{period1_dates.min().strftime('%b %d, %Y')} - {period1_dates.max().strftime('%b %d, %Y')}"
                 # st.caption(f"📅 {date_range}") # Removed for redundancy
@@ -1782,8 +1783,8 @@ def main():
         
         # Dynamically detect date range and create flexible filters
         # Get the actual date range from the data
-        if 'Date of Complaint' in df.columns:
-            valid_dates = df['Date of Complaint'].dropna()
+        if 'Date Received' in df.columns:
+            valid_dates = df['Date Received'].dropna()
             if len(valid_dates) > 0:
                 min_date = valid_dates.min()
                 max_date = valid_dates.max()
@@ -1801,7 +1802,7 @@ def main():
 
                 # Create filtered datasets
                 try:
-                    df_period1 = df[df['Date of Complaint'] >= ytd_start].copy()
+                    df_period1 = df[df['Date Received'] >= ytd_start].copy()
                     period1_label = f"{ytd_start.strftime('%b %d, %Y')} - {max_date.strftime('%b %d, %Y')}"
                     period1_short = "YTD"
                 except:
@@ -1810,7 +1811,7 @@ def main():
                     period1_short = "All"
 
                 try:
-                    df_period2 = df[df['Date of Complaint'] >= last_quarter_start].copy()
+                    df_period2 = df[df['Date Received'] >= last_quarter_start].copy()
                     period2_label = f"{last_quarter_start.strftime('%b %d, %Y')} - {max_date.strftime('%b %d, %Y')}"
                     period2_short = "3M"
                 except:
@@ -1819,7 +1820,7 @@ def main():
                     period2_short = "All"
 
                 try:
-                    df_period3 = df[df['Date of Complaint'] >= last_month_start].copy()
+                    df_period3 = df[df['Date Received'] >= last_month_start].copy()
                     period3_label = f"{last_month_start.strftime('%b %d, %Y')} - {max_date.strftime('%b %d, %Y')}"
                     period3_short = "1M"
                 except:
@@ -1968,8 +1969,8 @@ def main():
 
         # Monthly Trend
         st.markdown(f"#### Monthly Complaint Trend ({period1_label})")
-        if 'Date of Complaint' in df_period1.columns:
-            valid_dates = df_period1['Date of Complaint'].dropna()
+        if 'Date Received' in df_period1.columns:
+            valid_dates = df_period1['Date Received'].dropna()
             if len(valid_dates) > 0:
                 # Create a copy for manipulation
                 df_trend = df_period1.copy()
@@ -2004,7 +2005,7 @@ def main():
                 
                 # Group by Month and Type
                 # We need to preserve the Month object for grouping, then convert to string for plotting
-                df_trend['MonthPeriod'] = df_trend['Date of Complaint'].dt.to_period('M')
+                df_trend['MonthPeriod'] = df_trend['Date Received'].dt.to_period('M')
                 
                 monthly_data = df_trend.groupby(['MonthPeriod', 'Type']).size().reset_index(name='Count')
                 monthly_data['Month'] = monthly_data['MonthPeriod'].astype(str)
@@ -2033,7 +2034,7 @@ def main():
             else:
                 st.info("No valid complaint dates found")
         else:
-            st.error("'Date of Complaint' column not found")
+            st.error("'Date Received' column not found")
 
         st.markdown("---")
 
@@ -2192,8 +2193,8 @@ def main():
                                         (col_v3, df_period3, period3_label)]:
                 with col:
                     st.write(f"**{label}**")
-                    if len(df_period) > 0 and 'Date of Complaint' in df_period.columns:
-                        dates = df_period['Date of Complaint'].dropna()
+                    if len(df_period) > 0 and 'Date Received' in df_period.columns:
+                        dates = df_period['Date Received'].dropna()
                         if len(dates) > 0:
                             st.caption(f"{dates.min().strftime('%Y-%m-%d')} to {dates.max().strftime('%Y-%m-%d')}")
                             st.metric("Records", f"{len(df_period):,}", label_visibility="collapsed")

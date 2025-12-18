@@ -2155,8 +2155,8 @@ def render_weekly_report(df):
 
     # Dynamic Date Filtering based on Coverage Period
     metrics = {}
-    if 'Date of Complaint' in df_base.columns:
-        valid_dates = df_base['Date of Complaint'].dropna()
+    if 'Date Received' in df_base.columns:
+        valid_dates = df_base['Date Received'].dropna()
         if len(valid_dates) > 0:
             max_date_avail = valid_dates.max()
             
@@ -2176,7 +2176,7 @@ def render_weekly_report(df):
             end_date = max_date_avail
             
             # Filter data
-            mask = (df_base['Date of Complaint'] >= start_date) & (df_base['Date of Complaint'] <= end_date)
+            mask = (df_base['Date Received'] >= start_date) & (df_base['Date Received'] <= end_date)
             df_filtered = df_base[mask].copy()
             
             # Calculate ALL-TIME totals (before date filtering) for first KPI card
@@ -2241,13 +2241,13 @@ def render_weekly_report(df):
         else:
             st.warning("No valid dates found in data.")
     else:
-        st.warning("Date of Complaint column missing. Cannot filter by date.")
+        st.warning("Date Received column missing. Cannot filter by date.")
 
     # Data alignment confirmation
     total_records = len(df)
     date_range_info = ""
-    if 'Date of Complaint' in df.columns:
-        valid_dates = df['Date of Complaint'].dropna()
+    if 'Date Received' in df.columns:
+        valid_dates = df['Date Received'].dropna()
         if len(valid_dates) > 0:
             min_date = valid_dates.min()
             max_date = valid_dates.max()

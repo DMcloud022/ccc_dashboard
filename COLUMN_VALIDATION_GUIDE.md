@@ -10,7 +10,7 @@ The dashboard has been enhanced with robust column validation and error handling
 
 The system now automatically detects common variations of column names:
 
-- **Date of Complaint** → Also accepts: "Complaint Date", "Date Filed", "Filing Date"
+- **Date Received** → Also accepts: "Date of Complaint", "Complaint Date", "Date Filed", "Filing Date"
 - **Complaint Category** → Also accepts: "Category", "Type", "Complaint Type"
 - **Complaint Nature** → Also accepts: "Nature", "Nature of Complaint"
 - **Service Providers** → Also accepts: "Service Provider", "Provider", "ISP"
@@ -45,11 +45,11 @@ Instead of crashing, the dashboard now:
 3. Look for suggestions provided by the system
 4. If needed, rename your column in the source data to match one of the accepted names
 
-### Error: "Column 'Date of Complaint' not found"
+### Error: "Column 'Date Received' not found"
 
 **Solution:**
 1. Ensure your data has a date column
-2. Accepted names: "Date of Complaint", "Complaint Date", "Date Filed", "Filing Date"
+2. Accepted names: "Date Received", "Date of Complaint", "Complaint Date", "Date Filed", "Filing Date"
 3. The column should contain valid dates in formats like:
    - YYYY-MM-DD (2025-01-15)
    - MM/DD/YYYY (01/15/2025)
@@ -65,7 +65,7 @@ This is **not an error** - it means:
 ## Data Structure Requirements
 
 ### Required Columns (Critical)
-- **Date of Complaint** - Required for all time-based filtering and trends
+- **Date Received** - Required for all time-based filtering and trends
 
 ### Optional Columns (Recommended)
 - **Complaint Category** - For category analysis
@@ -84,7 +84,7 @@ This is **not an error** - it means:
 ## Example Data Structure
 
 ```csv
-Date of Complaint,Complaint Category,Complaint Nature,Service Providers,Agency
+Date Received,Complaint Category,Complaint Nature,Service Providers,Agency
 2025-01-15,Service Quality,Slow Internet,ISP Provider A,NTC
 2025-01-16,Billing,Overcharge,Telco B,PEMEDES
 ```
@@ -109,7 +109,7 @@ Edit `dashboard.py` around line 237 to add your custom column names to the `requ
 
 ```python
 required_columns = {
-    'Date of Complaint': ['Date of Complaint', 'Complaint Date', 'YOUR_CUSTOM_NAME_HERE'],
+    'Date Received': ['Date Received', 'Date of Complaint', 'Complaint Date', 'YOUR_CUSTOM_NAME_HERE'],
     # ... other columns
 }
 ```
@@ -118,6 +118,6 @@ required_columns = {
 
 If you continue to experience issues:
 1. Check the data preview to see what columns are actually loaded
-2. Verify your data has the minimum required column (Date of Complaint)
+2. Verify your data has the minimum required column (Date Received)
 3. Ensure date values are in a recognizable format
 4. Check for typos in column names
