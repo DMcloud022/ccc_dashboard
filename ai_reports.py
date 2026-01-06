@@ -2055,8 +2055,14 @@ def export_to_word(plans_df, top_issues, sp_breakdowns=None, dict_unit_counts=No
     buffer.seek(0)
     return buffer
 
-def render_weekly_report(df):
-    """Render the Weekly Report / Action Plan section with improved UI"""
+def render_weekly_report(df, filter_year=None, filter_month=None):
+    """Render the Weekly Report / Action Plan section with improved UI
+    
+    Args:
+        df: DataFrame with complaint data
+        filter_year: Selected year from dashboard filter (None means use all data)
+        filter_month: Selected month from dashboard filter (0 or None means all months in year)
+    """
 
     # Apply custom CSS
     st.markdown(AI_REPORT_CSS, unsafe_allow_html=True)
@@ -2069,23 +2075,47 @@ def render_weekly_report(df):
     </div>
     """, unsafe_allow_html=True)
 
-    # Report Type Selection
-    col_type, col_period = st.columns([2, 1])
+    # Check if dashboard date filter is active
+    # Filter is active if: year is set AND year is not "All Years" 
+    dashboard_filter_active = (filter_year is not None and 
+                              filter_year != "All Years" and 
+                              str(filter_year).strip() != "")
     
-    with col_type:
+    # Report Type and Coverage Selection
+    if dashboard_filter_active:
+        # When dashboard filter is active, only show report type
         report_type = st.selectbox(
             "Report Type:",
             ["Total (All Complaints)", "PEMEDES Complaints Only", "NTC Complaints Only"],
             help="Select the specific report type to generate individual action plans for different stakeholders"
         )
-    
-    with col_period:
-        coverage_period = st.selectbox(
-            "Report Coverage:",
-            ["Monthly", "Quarterly", "Semi-Annual", "Annual"],
-            index=0,  # Monthly is default
-            help="Select the time period coverage for the report analysis"
-        )
+        # Disable coverage period when dashboard filter is active
+        coverage_period = None
+        
+        # Show clear message about what data is being used
+        if filter_month and filter_month != 0:
+            month_name = datetime(2020, filter_month, 1).strftime('%B')
+            st.info(f"📅 **Report uses Dashboard filter:** {month_name} {filter_year} (Report Coverage disabled)")
+        else:
+            st.info(f"📅 **Report uses Dashboard filter:** Year {filter_year} (Report Coverage disabled)")
+    else:
+        # When no dashboard filter, show both report type and coverage period
+        col_type, col_period = st.columns([2, 1])
+        
+        with col_type:
+            report_type = st.selectbox(
+                "Report Type:",
+                ["Total (All Complaints)", "PEMEDES Complaints Only", "NTC Complaints Only"],
+                help="Select the specific report type to generate individual action plans for different stakeholders"
+            )
+        
+        with col_period:
+            coverage_period = st.selectbox(
+                "Report Coverage:",
+                ["Monthly", "Quarterly", "Semi-Annual", "Annual"],
+                index=0,  # Monthly is default
+                help="Select the time period coverage for the report analysis"
+            )
     
     st.markdown("---")
 
@@ -2098,6 +2128,31 @@ def render_weekly_report(df):
         3. Return to this tab to generate the AI-powered action plan
         """)
         return
+
+    # Apply date filter from dashboard if provided
+    if dashboard_filter_active and 'Date Received' in df.columns:
+        if filter_month and filter_month != 0:
+            # Filter by both year and month
+            df = df[(df['Date Received'].dt.year == filter_year) & 
+                   (df['Date Received'].dt.month == filter_month)].copy()
+        else:
+            # Filter by year only
+            df = df[df['Date Received'].dt.year == filter_year].copy()
+        
+        if df.empty:
+            st.warning(f"⚠️ No data found for the selected period in the Dashboard.")
+            return
+    elif (filter_year is not None and 
+          str(filter_year) == "All Years" and 
+          filter_month and 
+          filter_month != 0 and 
+          'Date Received' in df.columns):
+        # Filter by month across all years
+        df = df[df['Date Received'].dt.month == filter_month].copy()
+        
+        if df.empty:
+            st.warning(f"⚠️ No data found for the selected month across all years.")
+            return
 
     # IMPORTANT: The df passed here is already prepared by dashboard.py's prepare_data() function
     # which handles:
@@ -2153,30 +2208,38 @@ def render_weekly_report(df):
         df_base = df.copy()
         report_title_suffix = " - All Complaints"
 
-    # Dynamic Date Filtering based on Coverage Period
+    # Dynamic Date Filtering based on Coverage Period (only if dashboard filter is NOT active)
     metrics = {}
     if 'Date Received' in df_base.columns:
         valid_dates = df_base['Date Received'].dropna()
         if len(valid_dates) > 0:
             max_date_avail = valid_dates.max()
             
-            # Calculate date range based on coverage period
-            if coverage_period == "Monthly":
-                start_date = max_date_avail - pd.DateOffset(months=1)
-            elif coverage_period == "Quarterly":
-                start_date = max_date_avail - pd.DateOffset(months=3)
-            elif coverage_period == "Semi-Annual":
-                start_date = max_date_avail - pd.DateOffset(months=6)
-            elif coverage_period == "Annual":
-                start_date = max_date_avail - pd.DateOffset(months=12)
+            # Only apply coverage period filtering if dashboard filter is not active
+            if coverage_period and not dashboard_filter_active:
+                # Calculate date range based on coverage period
+                if coverage_period == "Monthly":
+                    start_date = max_date_avail - pd.DateOffset(months=1)
+                elif coverage_period == "Quarterly":
+                    start_date = max_date_avail - pd.DateOffset(months=3)
+                elif coverage_period == "Semi-Annual":
+                    start_date = max_date_avail - pd.DateOffset(months=6)
+                elif coverage_period == "Annual":
+                    start_date = max_date_avail - pd.DateOffset(months=12)
+                else:
+                    # Default to monthly if invalid selection
+                    start_date = max_date_avail - pd.DateOffset(months=1)
+                
+                end_date = max_date_avail
+                
+                # Filter data
+                mask = (df_base['Date Received'] >= start_date) & (df_base['Date Received'] <= end_date)
             else:
-                # Default to monthly if invalid selection
-                start_date = max_date_avail - pd.DateOffset(months=1)
-            
-            end_date = max_date_avail
-            
-            # Filter data
-            mask = (df_base['Date Received'] >= start_date) & (df_base['Date Received'] <= end_date)
+                # Dashboard filter is active - use all data from df_base (already filtered)
+                # Set date range to the actual min/max of the filtered data
+                start_date = valid_dates.min()
+                end_date = max_date_avail
+                mask = pd.Series([True] * len(df_base), index=df_base.index)
             df_filtered = df_base[mask].copy()
             
             # Calculate ALL-TIME totals (before date filtering) for first KPI card
@@ -2224,17 +2287,20 @@ def render_weekly_report(df):
                 # Show PEMEDES all-time vs period metrics
                 c_col1, c_col2 = st.columns(2)
                 c_col1.metric("Total Complaints", f"{all_time_total:,}", help=f"All-time delivery complaints in the database")
-                c_col2.metric("PEMEDES Monthly", f"{period_total:,}", help=f"Delivery concerns during {coverage_period.lower()} period ({start_date.strftime('%b %d, %Y')} to {end_date.strftime('%b %d, %Y')})")
+                period_label = coverage_period.lower() if coverage_period else "selected"
+                c_col2.metric("PEMEDES Period", f"{period_total:,}", help=f"Delivery concerns during {period_label} period ({start_date.strftime('%b %d, %Y')} to {end_date.strftime('%b %d, %Y')})")
             elif report_type == "NTC Complaints Only":
                 # Show NTC all-time vs period metrics
                 c_col1, c_col2 = st.columns(2)
                 c_col1.metric("Total Complaints", f"{all_time_total:,}", help=f"All-time telecommunications complaints in the database")
-                c_col2.metric("NTC Monthly", f"{period_total:,}", help=f"Telecom issues during {coverage_period.lower()} period ({start_date.strftime('%b %d, %Y')} to {end_date.strftime('%b %d, %Y')})")
+                period_label = coverage_period.lower() if coverage_period else "selected"
+                c_col2.metric("NTC Period", f"{period_total:,}", help=f"Telecom issues during {period_label} period ({start_date.strftime('%b %d, %Y')} to {end_date.strftime('%b %d, %Y')})")
             else:  # Total (All Complaints)
                 # Show all-time vs period comprehensive metrics
                 c_col1, c_col2 = st.columns(2)
                 c_col1.metric("Total Complaints", f"{all_time_total:,}", help=f"All-time complaints in the database")
-                c_col2.metric("Period Total", f"{period_total:,}", help=f"All complaints during {coverage_period.lower()} period ({start_date.strftime('%b %d, %Y')} to {end_date.strftime('%b %d, %Y')})")
+                period_label = coverage_period.lower() if coverage_period else "selected"
+                c_col2.metric("Period Total", f"{period_total:,}", help=f"All complaints during {period_label} period ({start_date.strftime('%b %d, %Y')} to {end_date.strftime('%b %d, %Y')})")
             
             # Use filtered data for the report
             df = df_filtered

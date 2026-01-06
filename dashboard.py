@@ -383,6 +383,12 @@ CUSTOM_CSS = """
     /* Sidebar - Simple white */
     [data-testid="stSidebar"] {
         background-color: white;
+        min-width: 340px;
+        max-width: 340px;
+    }
+    
+    [data-testid="stSidebar"] > div:first-child {
+        width: 340px;
     }
 
     /* Button styling */
@@ -1671,6 +1677,85 @@ def main():
             st.session_state.last_valid_df = df
             st.divider()
             
+            # Date Range Filter
+            st.markdown("**Date Filter**")
+            
+            # Get available date range from data
+            if 'Date Received' in df.columns:
+                # Convert to datetime if not already
+                temp_dates = pd.to_datetime(df['Date Received'], errors='coerce')
+                valid_dates = temp_dates.dropna()
+                
+                if len(valid_dates) > 0:
+                    min_date = valid_dates.min()
+                    max_date = valid_dates.max()
+                    
+                    # Generate year and month options with "All Years" option
+                    available_years = sorted(valid_dates.dt.year.unique(), reverse=True)
+                    year_options = ["All Years"] + [str(year) for year in available_years]
+                    
+                    # Initialize session state for date filter
+                    if 'filter_year' not in st.session_state:
+                        st.session_state.filter_year = max_date.year
+                    if 'filter_month' not in st.session_state:
+                        st.session_state.filter_month = 0  # 0 means all months
+                    
+                    col_y, col_m = st.columns(2)
+                    with col_y:
+                        # Determine current selection index
+                        if st.session_state.filter_year == "All Years":
+                            current_index = 0
+                        elif str(st.session_state.filter_year) in year_options:
+                            current_index = year_options.index(str(st.session_state.filter_year))
+                        else:
+                            current_index = 1 if len(year_options) > 1 else 0
+                        
+                        selected_year_str = st.selectbox(
+                            "Year",
+                            options=year_options,
+                            index=current_index,
+                            key="year_selector"
+                        )
+                        
+                        # Convert back to int or keep as "All Years"
+                        if selected_year_str == "All Years":
+                            selected_year = "All Years"
+                        else:
+                            selected_year = int(selected_year_str)
+                    
+                    with col_m:
+                        month_options = [("All Months", 0)] + [(datetime(2020, m, 1).strftime('%b'), m) for m in range(1, 13)]
+                        month_labels = [label for label, _ in month_options]
+                        month_values = [value for _, value in month_options]
+                        
+                        current_month_index = month_values.index(st.session_state.filter_month) if st.session_state.filter_month in month_values else 0
+                        
+                        selected_month_label = st.selectbox(
+                            "Month",
+                            options=month_labels,
+                            index=current_month_index,
+                            key="month_selector"
+                        )
+                        selected_month = month_values[month_labels.index(selected_month_label)]
+                    
+                    # Update session state
+                    st.session_state.filter_year = selected_year
+                    st.session_state.filter_month = selected_month
+                    
+                    # Show selected range
+                    if selected_year == "All Years":
+                        if selected_month == 0:
+                            st.caption(f"📅 Showing: All data")
+                        else:
+                            st.caption(f"📅 Showing: {selected_month_label} (all years)")
+                    else:
+                        if selected_month == 0:
+                            st.caption(f"📅 Showing: All of {selected_year}")
+                        else:
+                            st.caption(f"📅 Showing: {selected_month_label} {selected_year}")
+            
+            st.divider()
+            
             # Row 2: Refresh Controls
             st.markdown("**Auto-Refresh**")
             col_r1, col_r2 = st.columns([3, 1])
@@ -1781,34 +1866,62 @@ def main():
             st.error("❌ No valid data after processing. Please check your date formats.")
             return
         
-        # Dynamically detect date range and create flexible filters
-        # Get the actual date range from the data
+        # Apply user-selected date filter and create labels
+        selected_year = st.session_state.get('filter_year')
+        selected_month = st.session_state.get('filter_month', 0)
+        
+        if 'Date Received' in df.columns and 'filter_year' in st.session_state and selected_year != "All Years":
+            if selected_month == 0:
+                # Filter by year only
+                df = df[df['Date Received'].dt.year == selected_year].copy()
+            else:
+                # Filter by both year and month
+                df = df[(df['Date Received'].dt.year == selected_year) & 
+                       (df['Date Received'].dt.month == selected_month)].copy()
+            
+            if df.empty:
+                st.warning(f"⚠️ No data found for the selected period.")
+                return
+        elif 'Date Received' in df.columns and selected_year == "All Years" and selected_month != 0:
+            # Filter by month across all years
+            df = df[df['Date Received'].dt.month == selected_month].copy()
+            
+            if df.empty:
+                st.warning(f"⚠️ No data found for the selected month.")
+                return
+        
+        # Create labels based on user selection and actual data range
         if 'Date Received' in df.columns:
             valid_dates = df['Date Received'].dropna()
             if len(valid_dates) > 0:
                 min_date = valid_dates.min()
                 max_date = valid_dates.max()
 
-                # Calculate dynamic date ranges based on actual data
-                # Period 1: Year-to-Date (from start of current year to present)
-                current_year = max_date.year
-                ytd_start = pd.Timestamp(year=current_year, month=1, day=1)
+                # Create user-friendly labels based on filter selection
+                if selected_year == "All Years":
+                    if selected_month == 0:
+                        # All data
+                        period1_label = f"{min_date.strftime('%b %d, %Y')} - {max_date.strftime('%b %d, %Y')}"
+                        period1_short = "All"
+                    else:
+                        # Specific month across all years
+                        month_name = datetime(2020, selected_month, 1).strftime('%B')
+                        period1_label = f"{month_name} (All Years)"
+                        period1_short = f"{month_name[:3]} (All)"
+                elif selected_month == 0:
+                    # Full year selected
+                    period1_label = f"{min_date.strftime('%b %d, %Y')} - {max_date.strftime('%b %d, %Y')}"
+                    period1_short = str(selected_year)
+                else:
+                    # Specific month selected
+                    month_name = datetime(2020, selected_month, 1).strftime('%B')
+                    period1_label = f"{month_name} {selected_year}"
+                    period1_short = f"{month_name[:3]} {selected_year}"
 
-                # Period 2: Last Quarter (3 months from max date)
+                # For period 2 and 3, use same data but create sub-ranges
+                # Period 2: Last 3 months of the filtered data
                 last_quarter_start = max_date - pd.DateOffset(months=3)
-
-                # Period 3: Last Month (1 month from max date)
                 last_month_start = max_date - pd.DateOffset(months=1)
-
-                # Create filtered datasets
-                try:
-                    df_period1 = df[df['Date Received'] >= ytd_start].copy()
-                    period1_label = f"{ytd_start.strftime('%b %d, %Y')} - {max_date.strftime('%b %d, %Y')}"
-                    period1_short = "YTD"
-                except:
-                    df_period1 = df.copy()
-                    period1_label = "All Data"
-                    period1_short = "All"
 
                 try:
                     df_period2 = df[df['Date Received'] >= last_quarter_start].copy()
@@ -1816,7 +1929,7 @@ def main():
                     period2_short = "3M"
                 except:
                     df_period2 = df.copy()
-                    period2_label = "All Data"
+                    period2_label = period1_label
                     period2_short = "All"
 
                 try:
@@ -1825,8 +1938,11 @@ def main():
                     period3_short = "1M"
                 except:
                     df_period3 = df.copy()
-                    period3_label = "All Data"
+                    period3_label = period1_label
                     period3_short = "All"
+                
+                # Period 1 is the full filtered dataset
+                df_period1 = df.copy()
             else:
                 # No valid dates, use all data
                 df_period1 = df.copy()
@@ -2267,8 +2383,10 @@ def main():
 
     # Render AI Action Plan Tab
     with tab_ai_report:
-        # Pass the prepared dataframe to the AI report module
-        ai_reports.render_weekly_report(df_prepared)
+        # Pass the prepared dataframe and date filter settings to the AI report module
+        filter_year = st.session_state.get('filter_year')
+        filter_month = st.session_state.get('filter_month', 0)
+        ai_reports.render_weekly_report(df_prepared, filter_year, filter_month)
 
 if __name__ == "__main__":
     main()
