@@ -383,11 +383,14 @@ CUSTOM_CSS = """
     /* Sidebar - Simple white */
     [data-testid="stSidebar"] {
         background-color: white;
+    }
+    
+    [data-testid="stSidebar"][aria-expanded="true"] {
         min-width: 340px;
         max-width: 340px;
     }
     
-    [data-testid="stSidebar"] > div:first-child {
+    [data-testid="stSidebar"][aria-expanded="true"] > div:first-child {
         width: 340px;
     }
 
